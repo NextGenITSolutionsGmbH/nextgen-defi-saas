@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../trpc";
+import { addExportJob } from '../queue';
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -100,14 +101,7 @@ export const exportRouter = router({
         },
       });
 
-      // TODO: Dispatch export job to BullMQ queue
-      // await exportQueue.add('generate-export', {
-      //   exportId: exportRecord.id,
-      //   taxYear: input.taxYear,
-      //   method: input.method,
-      //   format: input.format,
-      //   walletIds: input.walletIds,
-      // });
+      await addExportJob(exportRecord.id, ctx.user.id, input.taxYear, input.method, input.format);
 
       return {
         id: exportRecord.id,
@@ -169,7 +163,7 @@ export const exportRouter = router({
       }
 
       return {
-        url: exportRecord.filePath,
+        url: `/api/exports/${exportRecord.id}`,
         format: exportRecord.format,
         fileHash: exportRecord.fileHash,
       };
@@ -255,8 +249,7 @@ export const exportRouter = router({
         },
       });
 
-      // TODO: Dispatch to queue
-      // await exportQueue.add('generate-export', { exportId: newExport.id, ... });
+      await addExportJob(newExport.id, ctx.user.id, existing.taxYear, existing.method as "FIFO" | "LIFO", existing.format as "CSV" | "XLSX" | "PDF");
 
       return {
         id: newExport.id,
