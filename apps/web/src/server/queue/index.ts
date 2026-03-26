@@ -9,10 +9,9 @@ export {
   getPriceFetchQueue,
 } from "./connection";
 
-// Workers (import to start processing)
-export { walletSyncWorker } from "./workers/wallet-sync.worker";
-export { exportGenWorker } from "./workers/export-gen.worker";
-export { priceFetchWorker } from "./workers/price-fetch.worker";
+// Workers are NOT re-exported here to avoid eager Redis connections at import
+// time. Start workers via a dedicated entry point (e.g. worker process) by
+// importing directly from ./workers/*.worker.ts.
 
 // Re-export shared types and constants for convenience
 export {

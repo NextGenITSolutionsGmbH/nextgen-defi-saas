@@ -41,11 +41,11 @@ test.describe("Accessibility (axe-core)", () => {
     expect(results.violations, formatViolations(results.violations)).toHaveLength(0);
   });
 
-  test("dashboard page has no a11y violations", async ({ page }) => {
-    // The dashboard is a protected route — the middleware will redirect
+  test("wallets page has no a11y violations", async ({ page }) => {
+    // The wallets page is a protected route — the middleware will redirect
     // to /login, which is acceptable.  If authenticated state is
     // needed, use the auth helper to sign in first.
-    await page.goto("/dashboard");
+    await page.goto("/wallets");
     await page.waitForLoadState("networkidle");
 
     const results = await new AxeBuilder({ page })

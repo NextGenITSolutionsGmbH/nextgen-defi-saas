@@ -18,10 +18,10 @@ test.describe("Authentication flow", () => {
       await confirmField.fill(TEST_USER.password);
     }
 
-    await page.getByRole("button", { name: /register|sign up/i }).click();
+    await page.getByRole("button", { name: /register|sign up|create account/i }).click();
 
-    // Expect redirect to dashboard or login page after successful registration
-    await expect(page).toHaveURL(/\/(dashboard|login)/);
+    // Expect redirect to wallets (post-login landing), dashboard, or login page
+    await expect(page).toHaveURL(/\/(wallets|dashboard|login)/);
   });
 
   test("login with valid credentials", async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe("Authentication flow", () => {
     // Clear any existing cookies / storage
     await page.context().clearCookies();
 
-    await page.goto("/dashboard");
+    await page.goto("/wallets");
 
     // Should redirect to login
     await expect(page).toHaveURL(/\/login/);
@@ -67,7 +67,7 @@ test.describe("Authentication flow", () => {
     await expect(page).not.toHaveURL(/\/login/);
 
     // Now navigate to a protected route
-    await page.goto("/dashboard");
-    await expect(page).toHaveURL(/\/dashboard/);
+    await page.goto("/wallets");
+    await expect(page).toHaveURL(/\/wallets/);
   });
 });

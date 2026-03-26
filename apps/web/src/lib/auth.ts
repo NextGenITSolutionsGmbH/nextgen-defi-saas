@@ -1,7 +1,6 @@
 import NextAuth from "next-auth";
 import type { NextAuthConfig } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@defi-tracker/db";
 import { verifyPassword } from "./auth-utils";
 import { z } from "zod";
@@ -12,7 +11,8 @@ const credentialsSchema = z.object({
 });
 
 export const authConfig: NextAuthConfig = {
-  adapter: PrismaAdapter(prisma),
+  // No adapter needed: Credentials provider + JWT strategy manages sessions
+  // entirely via signed cookies — no DB session tables required.
   session: {
     strategy: "jwt",
     maxAge: 15 * 60, // 15 minutes
