@@ -10,10 +10,10 @@ const nextConfig: NextConfig = {
     },
   },
   eslint: {
-    ignoreDuringBuilds: true, // TODO: Fix ESLint config, then set to false
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true, // TODO: Fix type errors from agent integration, then set to false
+    ignoreBuildErrors: false,
   },
 };
 

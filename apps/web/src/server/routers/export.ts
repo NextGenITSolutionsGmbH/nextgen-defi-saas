@@ -2,7 +2,7 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 
 const createExportSchema = z.object({
-  format: z.enum(["csv", "pdf", "json"]),
+  format: z.enum(["CSV", "XLSX", "PDF"]),
   walletIds: z.array(z.string().uuid()).optional(),
   dateFrom: z.string().datetime().optional(),
   dateTo: z.string().datetime().optional(),
@@ -21,13 +21,10 @@ export const exportRouter = router({
         data: {
           userId: ctx.user.id,
           format: input.format,
-          status: "pending",
-          filters: {
-            walletIds: input.walletIds,
-            dateFrom: input.dateFrom,
-            dateTo: input.dateTo,
-            classifications: input.classifications,
-          },
+          status: "PENDING",
+          taxYear: new Date().getFullYear(),
+          method: "FIFO",
+          generatedAt: new Date(),
         },
       });
 
@@ -36,7 +33,7 @@ export const exportRouter = router({
 
       return {
         id: exportRecord.id,
-        status: "pending" as const,
+        status: "PENDING" as const,
         message: "Export has been queued for processing",
       };
     }),
@@ -44,15 +41,14 @@ export const exportRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
     const exports = await ctx.db.export.findMany({
       where: { userId: ctx.user.id },
-      orderBy: { createdAt: "desc" },
+      orderBy: { generatedAt: "desc" },
       take: 20,
       select: {
         id: true,
         format: true,
         status: true,
-        fileUrl: true,
-        createdAt: true,
-        completedAt: true,
+        filePath: true,
+        generatedAt: true,
       },
     });
 
@@ -73,12 +69,12 @@ export const exportRouter = router({
         throw new Error("Export not found");
       }
 
-      if (exportRecord.status !== "completed" || !exportRecord.fileUrl) {
+      if (exportRecord.status !== "COMPLETED" || !exportRecord.filePath) {
         throw new Error("Export is not yet ready for download");
       }
 
       return {
-        url: exportRecord.fileUrl,
+        url: exportRecord.filePath,
         format: exportRecord.format,
       };
     }),

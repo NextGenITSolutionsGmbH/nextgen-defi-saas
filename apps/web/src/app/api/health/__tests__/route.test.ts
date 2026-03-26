@@ -29,27 +29,19 @@ describe("GET /api/health", () => {
   it("returns a 200 status code", async () => {
     const mod = await importRoute();
 
-    // The route may export GET as a named export
-    const handler = mod.GET ?? mod.default;
+    // The route exports GET as a named export
+    const handler = mod.GET;
     expect(handler).toBeDefined();
 
-    const request = new Request("http://localhost:3000/api/health", {
-      method: "GET",
-    });
-
-    const response = await handler(request);
+    const response = await handler();
     expect(response.status).toBe(200);
   });
 
   it("returns JSON with a status field", async () => {
     const mod = await importRoute();
-    const handler = mod.GET ?? mod.default;
+    const handler = mod.GET;
 
-    const request = new Request("http://localhost:3000/api/health", {
-      method: "GET",
-    });
-
-    const response = await handler(request);
+    const response = await handler();
     const body = await response.json();
 
     expect(body).toHaveProperty("status");
@@ -58,13 +50,9 @@ describe("GET /api/health", () => {
 
   it("includes a timestamp in the response", async () => {
     const mod = await importRoute();
-    const handler = mod.GET ?? mod.default;
+    const handler = mod.GET;
 
-    const request = new Request("http://localhost:3000/api/health", {
-      method: "GET",
-    });
-
-    const response = await handler(request);
+    const response = await handler();
     const body = await response.json();
 
     expect(body).toHaveProperty("timestamp");

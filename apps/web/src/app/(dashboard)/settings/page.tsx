@@ -6,13 +6,13 @@ import { trpc } from "@/lib/trpc-client";
 
 const PLANS = [
   {
-    id: "free" as const,
-    name: "Free",
+    id: "STARTER" as const,
+    name: "Starter",
     price: "0",
     features: ["3 wallets", "100 transactions/month", "CSV export"],
   },
   {
-    id: "pro" as const,
+    id: "PRO" as const,
     name: "Pro",
     price: "19",
     features: [
@@ -23,8 +23,8 @@ const PLANS = [
     ],
   },
   {
-    id: "enterprise" as const,
-    name: "Enterprise",
+    id: "BUSINESS" as const,
+    name: "Business",
     price: "99",
     features: [
       "Everything in Pro",
@@ -42,7 +42,7 @@ export default function SettingsPage() {
     onSuccess: () => userQuery.refetch(),
   });
 
-  const currentPlan = userQuery.data?.plan ?? "free";
+  const currentPlan = userQuery.data?.plan ?? "STARTER";
 
   return (
     <div className="space-y-8">

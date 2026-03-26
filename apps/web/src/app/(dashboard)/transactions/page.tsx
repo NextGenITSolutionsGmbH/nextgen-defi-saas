@@ -130,33 +130,33 @@ export default function TransactionsPage() {
                 className="border-b border-[var(--color-border-subtle)] transition hover:bg-[var(--color-bg-secondary)]"
               >
                 <td className="px-4 py-3 font-mono text-xs text-[var(--color-text-link)]">
-                  {tx.hash.slice(0, 10)}...
+                  {tx.txHash.slice(0, 10)}...
                 </td>
                 <td className="px-4 py-3 capitalize text-[var(--color-text-primary)]">
-                  {tx.chain}
+                  {tx.protocol ?? "unknown"}
                 </td>
                 <td className="px-4 py-3">
                   <div className="font-mono text-xs text-[var(--color-text-secondary)]">
-                    {tx.from.slice(0, 8)}...
+                    {tx.walletId.slice(0, 8)}...
                   </div>
                   <div className="font-mono text-xs text-[var(--color-text-tertiary)]">
-                    {tx.to.slice(0, 8)}...
+                    &mdash;
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums text-[var(--color-text-primary)]">
-                  {tx.value} {tx.tokenSymbol}
+                  &mdash;
                 </td>
                 <td className="px-4 py-3">
                   <span className="inline-block rounded-full bg-[var(--color-bg-tertiary)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--color-text-secondary)]">
-                    {tx.classification ?? "unclassified"}
+                    {tx.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs text-[var(--color-text-tertiary)]">
-                  {new Date(tx.timestamp).toLocaleDateString()}
+                  {new Date(Number(tx.blockTimestamp) * 1000).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-3">
                   <select
-                    defaultValue={tx.classification ?? ""}
+                    defaultValue=""
                     onChange={(e) => {
                       if (e.target.value) {
                         classifyMutation.mutate({

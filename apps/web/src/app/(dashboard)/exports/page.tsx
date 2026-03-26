@@ -5,7 +5,7 @@ import { Download, FileText, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 
 export default function ExportsPage() {
-  const [format, setFormat] = useState<"csv" | "pdf" | "json">("csv");
+  const [format, setFormat] = useState<"CSV" | "XLSX" | "PDF">("CSV");
 
   const utils = trpc.useUtils();
   const exportsQuery = trpc.export.list.useQuery();
@@ -37,9 +37,9 @@ export default function ExportsPage() {
               onChange={(e) => setFormat(e.target.value as typeof format)}
               className="mt-1 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-secondary)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none"
             >
-              <option value="csv">CSV</option>
-              <option value="pdf">PDF</option>
-              <option value="json">JSON</option>
+              <option value="CSV">CSV</option>
+              <option value="XLSX">XLSX</option>
+              <option value="PDF">PDF</option>
             </select>
           </div>
           <button

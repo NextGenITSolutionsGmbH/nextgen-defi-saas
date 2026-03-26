@@ -163,14 +163,14 @@ export default function WalletsPage() {
                   </p>
                 </div>
                 <span className="ml-2 rounded-full bg-[var(--color-bg-tertiary)] px-2.5 py-0.5 text-xs font-medium capitalize text-[var(--color-text-secondary)]">
-                  {wallet.chain}
+                  {wallet.chainId}
                 </span>
               </div>
               <div className="mt-4 flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
-                <span>{wallet._count.transactions} transactions</span>
+                <span>Chain {wallet.chainId}</span>
                 <span>
-                  {wallet.lastSyncedAt
-                    ? `Synced ${new Date(wallet.lastSyncedAt).toLocaleDateString()}`
+                  {wallet.lastSyncAt
+                    ? `Synced ${new Date(wallet.lastSyncAt).toLocaleDateString()}`
                     : "Never synced"}
                 </span>
               </div>

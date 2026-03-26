@@ -3,7 +3,7 @@ import { router, protectedProcedure } from "../trpc";
 
 const listTransactionsSchema = z.object({
   walletId: z.string().uuid().optional(),
-  chain: z.string().optional(),
+  protocol: z.string().optional(),
   classification: z.string().optional(),
   cursor: z.string().optional(),
   limit: z.number().min(1).max(100).default(25),
@@ -36,32 +36,27 @@ export const transactionRouter = router({
   list: protectedProcedure
     .input(listTransactionsSchema)
     .query(async ({ ctx, input }) => {
-      const { walletId, chain, classification, cursor, limit } = input;
+      const { walletId, protocol, cursor, limit } = input;
 
       const where: Record<string, unknown> = {
         wallet: { userId: ctx.user.id },
       };
 
       if (walletId) where.walletId = walletId;
-      if (chain) where.chain = chain;
-      if (classification) where.classification = classification;
+      if (protocol) where.protocol = protocol;
 
       const transactions = await ctx.db.transaction.findMany({
         where,
         take: limit + 1,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        orderBy: { timestamp: "desc" },
+        orderBy: { blockTimestamp: "desc" },
         select: {
           id: true,
-          hash: true,
-          chain: true,
-          from: true,
-          to: true,
-          value: true,
-          tokenSymbol: true,
-          classification: true,
-          timestamp: true,
+          txHash: true,
+          protocol: true,
+          blockTimestamp: true,
           walletId: true,
+          status: true,
         },
       });
 
@@ -89,7 +84,7 @@ export const transactionRouter = router({
           wallet: {
             select: {
               address: true,
-              chain: true,
+              chainId: true,
               label: true,
             },
           },
@@ -117,14 +112,17 @@ export const transactionRouter = router({
         throw new Error("Transaction not found");
       }
 
-      const updated = await ctx.db.transaction.update({
-        where: { id: input.transactionId },
+      // Create a TxClassification record instead of updating a non-existent field
+      const classification = await ctx.db.txClassification.create({
         data: {
-          classification: input.classification,
-          notes: input.notes,
+          transactionId: input.transactionId,
+          ctType: input.classification,
+          priceSource: "MANUAL",
+          isManual: true,
+          comment: input.notes ?? null,
         },
       });
 
-      return updated;
+      return classification;
     }),
 });

@@ -10,6 +10,16 @@ const addWalletSchema = z.object({
   label: z.string().max(64).optional(),
 });
 
+const CHAIN_ID_MAP: Record<string, number> = {
+  ethereum: 1,
+  polygon: 137,
+  arbitrum: 42161,
+  optimism: 10,
+  base: 8453,
+  solana: 0,
+  bitcoin: -1,
+};
+
 const removeWalletSchema = z.object({
   walletId: z.string().uuid(),
 });
@@ -26,13 +36,10 @@ export const walletRouter = router({
       select: {
         id: true,
         address: true,
-        chain: true,
+        chainId: true,
         label: true,
-        lastSyncedAt: true,
+        lastSyncAt: true,
         createdAt: true,
-        _count: {
-          select: { transactions: true },
-        },
       },
     });
 
@@ -42,11 +49,13 @@ export const walletRouter = router({
   add: protectedProcedure
     .input(addWalletSchema)
     .mutation(async ({ ctx, input }) => {
+      const chainId = CHAIN_ID_MAP[input.chain] ?? 1;
+
       const existing = await ctx.db.wallet.findFirst({
         where: {
           userId: ctx.user.id,
           address: input.address.toLowerCase(),
-          chain: input.chain,
+          chainId,
         },
       });
 
@@ -58,7 +67,7 @@ export const walletRouter = router({
         data: {
           userId: ctx.user.id,
           address: input.address.toLowerCase(),
-          chain: input.chain,
+          chainId,
           label: input.label,
         },
       });
@@ -102,7 +111,7 @@ export const walletRouter = router({
       }
 
       // TODO: Dispatch sync job to BullMQ queue
-      // await syncQueue.add('sync-wallet', { walletId: wallet.id, chain: wallet.chain });
+      // await syncQueue.add('sync-wallet', { walletId: wallet.id, chainId: wallet.chainId });
 
       return {
         status: "queued" as const,

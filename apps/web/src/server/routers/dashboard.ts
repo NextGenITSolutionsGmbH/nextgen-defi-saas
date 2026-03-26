@@ -8,7 +8,7 @@ export const dashboardRouter = router({
         where: { wallet: { userId: ctx.user.id } },
       }),
       ctx.db.export.count({
-        where: { userId: ctx.user.id, status: "pending" },
+        where: { userId: ctx.user.id, status: "PENDING" },
       }),
     ]);
 
@@ -27,11 +27,11 @@ export const dashboardRouter = router({
       ctx.db.transaction.count({
         where: {
           wallet: { userId: ctx.user.id },
-          timestamp: { gte: thirtyDaysAgo },
+          createdAt: { gte: thirtyDaysAgo },
         },
       }),
       ctx.db.transaction.groupBy({
-        by: ["classification"],
+        by: ["status"],
         where: {
           wallet: { userId: ctx.user.id },
         },
@@ -43,7 +43,7 @@ export const dashboardRouter = router({
     return {
       recentTransactionCount: recentTransactions,
       classificationBreakdown: classificationBreakdown.map((item) => ({
-        classification: item.classification ?? "unclassified",
+        classification: item.status ?? "unclassified",
         count: item._count.id,
       })),
     };

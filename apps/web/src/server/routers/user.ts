@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 
-const planSchema = z.enum(["free", "pro", "enterprise"]);
+const planSchema = z.enum(["STARTER", "PRO", "BUSINESS", "KANZLEI"]);
 
 export const userRouter = router({
   me: protectedProcedure.query(async ({ ctx }) => {
@@ -10,7 +10,6 @@ export const userRouter = router({
       select: {
         id: true,
         email: true,
-        name: true,
         plan: true,
         createdAt: true,
         totpEnabled: true,

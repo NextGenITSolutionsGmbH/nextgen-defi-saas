@@ -41,7 +41,6 @@ export const authConfig: NextAuthConfig = {
           select: {
             id: true,
             email: true,
-            name: true,
             passwordHash: true,
             plan: true,
           },
@@ -59,7 +58,6 @@ export const authConfig: NextAuthConfig = {
         return {
           id: user.id,
           email: user.email,
-          name: user.name,
           plan: user.plan,
         };
       },
@@ -109,7 +107,7 @@ declare module "next-auth" {
   }
 }
 
-declare module "next-auth/jwt" {
+declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
     plan: string;

@@ -5,7 +5,16 @@ import { prisma } from "@defi-tracker/db";
 import superjson from "superjson";
 
 export interface TRPCContext {
-  session: Awaited<ReturnType<typeof auth>> | null;
+  session: {
+    user?: {
+      id?: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      plan?: string;
+    };
+    expires: string;
+  } | null;
   db: typeof prisma;
 }
 
@@ -28,18 +37,20 @@ export const publicProcedure = t.procedure;
 export const createCallerFactory = t.createCallerFactory;
 
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
-  if (!ctx.session?.user) {
+  if (!ctx.session?.user?.id) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "You must be logged in to access this resource",
     });
   }
 
+  const user = { ...ctx.session.user, id: ctx.session.user.id };
+
   return next({
     ctx: {
       ...ctx,
       session: ctx.session,
-      user: ctx.session.user,
+      user,
     },
   });
 });
