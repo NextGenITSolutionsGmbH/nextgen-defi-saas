@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -28,8 +29,7 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const [collapsed, setCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  // For demo purposes, active path is "/"
-  const activePath = "/";
+  const pathname = usePathname();
 
   return (
     <>
@@ -86,7 +86,10 @@ export function Sidebar() {
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="flex flex-col gap-1 px-2" role="list">
             {navItems.map((item) => {
-              const isActive = activePath === item.href;
+              const isActive =
+                item.href === "/"
+                  ? pathname === "/"
+                  : pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <li key={item.href}>
                   <a

@@ -1,5 +1,4 @@
 "use client";
-// @ts-nocheck
 
 import { useState, useCallback } from "react";
 import { useSession, signOut } from "next-auth/react";

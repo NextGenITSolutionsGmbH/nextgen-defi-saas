@@ -1,37 +1,27 @@
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../trpc";
 import { addWalletSyncJob } from '../queue';
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-/** Flare Mainnet — this is a Flare-only MVP */
-const FLARE_CHAIN_ID = 14;
-
-/** Wallet limits per plan tier */
-const PLAN_WALLET_LIMITS: Record<string, number> = {
-  STARTER: 1,
-  PRO: 5,
-  BUSINESS: 20,
-  KANZLEI: 20,
-};
-
-/** EVM address regex: 0x followed by exactly 40 hex characters */
-const EVM_ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
-
-// ---------------------------------------------------------------------------
-// Schemas
-// ---------------------------------------------------------------------------
 
 const addWalletSchema = z.object({
   address: z
     .string()
-    .regex(EVM_ADDRESS_REGEX, "Invalid EVM address — must be 0x followed by 40 hex characters"),
-  label: z.string().max(100).optional(),
-  connectionMethod: z.enum(["metamask", "walletconnect", "manual"]),
+    .min(26, "Wallet address is too short")
+    .max(128, "Wallet address is too long"),
+  chain: z.enum(["flare", "ethereum", "polygon", "arbitrum", "optimism", "base", "solana", "bitcoin"]),
+  label: z.string().max(64).optional(),
+  connectionMethod: z.enum(["metamask", "walletconnect", "manual"]).default("manual"),
 });
+
+const CHAIN_ID_MAP: Record<string, number> = {
+  flare: 14,
+  ethereum: 1,
+  polygon: 137,
+  arbitrum: 42161,
+  optimism: 10,
+  base: 8453,
+  solana: 0,
+  bitcoin: -1,
+};
 
 const removeWalletSchema = z.object({
   walletId: z.string().uuid(),
@@ -41,18 +31,7 @@ const syncWalletSchema = z.object({
   walletId: z.string().uuid(),
 });
 
-const syncStatusSchema = z.object({
-  walletId: z.string().uuid(),
-});
-
-// ---------------------------------------------------------------------------
-// Router
-// ---------------------------------------------------------------------------
-
 export const walletRouter = router({
-  /**
-   * List all wallets for the authenticated user.
-   */
   list: protectedProcedure.query(async ({ ctx }) => {
     const wallets = await ctx.db.wallet.findMany({
       where: { userId: ctx.user.id },
@@ -64,62 +43,37 @@ export const walletRouter = router({
         label: true,
         syncStatus: true,
         lastSyncAt: true,
+        lastSyncBlock: true,
         createdAt: true,
-        _count: {
-          select: { transactions: true },
-        },
+        _count: { select: { transactions: true } },
       },
     });
 
     return wallets;
   }),
 
-  /**
-   * Add a new Flare wallet (read-only tracking).
-   * Enforces plan-based wallet limits.
-   */
   add: protectedProcedure
     .input(addWalletSchema)
     .mutation(async ({ ctx, input }) => {
-      const address = input.address.toLowerCase();
+      const chainId = CHAIN_ID_MAP[input.chain] ?? 1;
 
-      // --- Plan-based wallet limit ---
-      const plan = ctx.user.plan ?? "STARTER";
-      const limit = PLAN_WALLET_LIMITS[plan] ?? PLAN_WALLET_LIMITS.STARTER;
-
-      const currentCount = await ctx.db.wallet.count({
-        where: { userId: ctx.user.id },
-      });
-
-      if (currentCount >= limit) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: `Wallet limit reached (${limit} wallet${limit === 1 ? "" : "s"} on ${plan} plan). Upgrade your plan to add more wallets.`,
-        });
-      }
-
-      // --- Duplicate check ---
       const existing = await ctx.db.wallet.findFirst({
         where: {
           userId: ctx.user.id,
-          address,
-          chainId: FLARE_CHAIN_ID,
+          address: input.address.toLowerCase(),
+          chainId,
         },
       });
 
       if (existing) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "This Flare wallet is already being tracked.",
-        });
+        throw new Error("Wallet already exists for this chain");
       }
 
-      // --- Create wallet ---
       const wallet = await ctx.db.wallet.create({
         data: {
           userId: ctx.user.id,
-          address,
-          chainId: FLARE_CHAIN_ID,
+          address: input.address.toLowerCase(),
+          chainId,
           label: input.label,
         },
       });
@@ -127,9 +81,6 @@ export const walletRouter = router({
       return wallet;
     }),
 
-  /**
-   * Remove a wallet and all associated data.
-   */
   remove: protectedProcedure
     .input(removeWalletSchema)
     .mutation(async ({ ctx, input }) => {
@@ -141,10 +92,7 @@ export const walletRouter = router({
       });
 
       if (!wallet) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Wallet not found.",
-        });
+        throw new Error("Wallet not found");
       }
 
       await ctx.db.wallet.delete({
@@ -154,9 +102,6 @@ export const walletRouter = router({
       return { success: true };
     }),
 
-  /**
-   * Trigger a sync for a wallet.
-   */
   sync: protectedProcedure
     .input(syncWalletSchema)
     .mutation(async ({ ctx, input }) => {
@@ -168,13 +113,10 @@ export const walletRouter = router({
       });
 
       if (!wallet) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Wallet not found.",
-        });
+        throw new Error("Wallet not found");
       }
 
-      // Mark as syncing — the background job will update to COMPLETED or ERROR
+      // Update status to SYNCING
       await ctx.db.wallet.update({
         where: { id: wallet.id },
         data: { syncStatus: "SYNCING" },
@@ -189,11 +131,8 @@ export const walletRouter = router({
       };
     }),
 
-  /**
-   * Get the current sync status for a wallet.
-   */
   syncStatus: protectedProcedure
-    .input(syncStatusSchema)
+    .input(z.object({ walletId: z.string().uuid() }))
     .query(async ({ ctx, input }) => {
       const wallet = await ctx.db.wallet.findFirst({
         where: {
@@ -205,17 +144,12 @@ export const walletRouter = router({
           syncStatus: true,
           lastSyncAt: true,
           lastSyncBlock: true,
-          _count: {
-            select: { transactions: true },
-          },
+          _count: { select: { transactions: true } },
         },
       });
 
       if (!wallet) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Wallet not found.",
-        });
+        throw new Error("Wallet not found");
       }
 
       return wallet;

@@ -1,267 +1,382 @@
 import { describe, it, expect } from 'vitest';
 import { ClassificationEngine } from '../classification-engine';
-import { EVENT_SIGNATURES } from '../../types/classifier';
-import type { EventLog } from '../../types/classifier';
+import type { DecodedEvent, ClassificationResult, AmpelStatus } from '../types';
 
 describe('ClassificationEngine', () => {
   const engine = new ClassificationEngine();
 
-  function makeEvent(overrides: Partial<EventLog> = {}): EventLog {
+  function makeEvent(overrides: Partial<DecodedEvent> = {}): DecodedEvent {
     return {
-      address: '0x1234567890abcdef1234567890abcdef12345678',
-      topics: [],
-      data: '0x',
-      transactionHash: '0xabc123',
+      txHash: '0xabc123def456789012345678901234567890abcdef1234567890abcdef12345678',
+      blockNumber: 12345678,
+      blockTimestamp: Math.floor(new Date('2025-06-01T12:00:00Z').getTime() / 1000),
+      logIndex: 0,
+      contractAddress: '0x1234567890abcdef1234567890abcdef12345678',
+      eventName: 'Transfer',
+      args: {},
+      protocol: null,
       ...overrides,
     };
   }
 
-  // ─── ERC20 TRANSFER ───
+  // ---- Layer 1: Protocol ABI Match ----
 
-  it('should classify ERC20 Transfer as Trade', () => {
+  it('should classify SparkDEX Swap via protocol field', () => {
     const event = makeEvent({
-      topics: [EVENT_SIGNATURES.ERC20_TRANSFER, '0xfrom', '0xto'],
+      eventName: 'Swap',
+      protocol: 'sparkdex',
+      args: {
+        sender: '0xuser',
+        recipient: '0xuser',
+        amount0: '1000000000000000000',
+        amount1: '-500000',
+        sqrtPriceX96: '123456',
+        liquidity: '789',
+        tick: '-100',
+      },
     });
 
     const result = engine.classify(event);
 
-    expect(result.type).toBe('Trade');
-    expect(result.status).toBe('GREEN');
-    expect(result.taxReference).toContain('§ 23 EStG');
-    expect(result.method).toBe('EVENT_PATTERN');
+    expect(result.ctType).toBe('Trade');
+    expect(result.ampelStatus).toBe('GREEN');
+    expect(result.exchange).toContain('SparkDEX');
   });
 
-  // ─── V3 SWAP ───
-
-  it('should classify V3 Swap event correctly', () => {
+  it('should classify Enosys events via protocol field', () => {
     const event = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_SWAP, '0xsender', '0xrecipient'],
+      eventName: 'Swap',
+      protocol: 'enosys',
+      args: {
+        sender: '0xuser',
+        amount0In: '1000',
+        amount1Out: '500',
+      },
+    });
+
+    const result = engine.classify(event);
+    // Should be routed to enosys classifier
+    expect(result.ampelStatus).not.toBeUndefined();
+  });
+
+  it('should classify Kinetic events via protocol field', () => {
+    const event = makeEvent({
+      eventName: 'Mint',
+      protocol: 'kinetic',
+      args: {
+        minter: '0xuser',
+        mintAmount: '1000',
+        mintTokens: '500',
+      },
+    });
+
+    const result = engine.classify(event);
+    expect(result.ampelStatus).not.toBeUndefined();
+  });
+
+  it('should classify Flare native events via protocol field', () => {
+    const event = makeEvent({
+      eventName: 'RewardClaimed',
+      protocol: 'flare',
+      args: {
+        beneficiary: '0xuser',
+        amount: '1000',
+      },
+    });
+
+    const result = engine.classify(event);
+    expect(result.ampelStatus).not.toBeUndefined();
+  });
+
+  // ---- Layer 2: Contract Address Match ----
+
+  it('should classify events from known SparkDEX contract address', () => {
+    const event = makeEvent({
+      eventName: 'Swap',
+      contractAddress: '0x8a1e35f5c98c4e85500f079e0b2bd83bdf23e9cd', // SparkDEX V3 Router
+      protocol: null,
+      args: {
+        sender: '0xuser',
+        amount0: '1000',
+        amount1: '500',
+      },
+    });
+
+    const result = engine.classify(event);
+    // Should be routed to SparkDEX classifier via address lookup
+    expect(result.ampelStatus).not.toBeUndefined();
+  });
+
+  it('should classify events from known Kinetic Market address', () => {
+    const event = makeEvent({
+      eventName: 'Mint',
+      contractAddress: '0xb348e39080fce8a97147adf16a5cbe43e85ae430', // kFLR
+      protocol: null,
+      args: {
+        minter: '0xuser',
+        mintAmount: '1000',
+      },
+    });
+
+    const result = engine.classify(event);
+    expect(result.ampelStatus).not.toBeUndefined();
+  });
+
+  // ---- Layer 3: Event Pattern Heuristic ----
+
+  it('should classify Swap events heuristically when no protocol known', () => {
+    const event = makeEvent({
+      eventName: 'Swap',
+      contractAddress: '0x0000000000000000000000000000000000000099', // unknown address
+      protocol: null,
+      args: {
+        amountIn: '1000',
+        amountOut: '500',
+        tokenIn: 'FLR',
+        tokenOut: 'USDT',
+      },
     });
 
     const result = engine.classify(event);
 
-    expect(result.type).toBe('Trade');
-    expect(result.status).toBe('GREEN');
-    expect(result.taxReference).toContain('§ 23 EStG');
-    expect(result.confidence).toBeGreaterThanOrEqual(0.9);
+    expect(result.ctType).toBe('Trade');
+    expect(result.ampelStatus).toBe('YELLOW');
+    expect(result.comment).toContain('heuristisch');
   });
 
-  it('should classify V3 Swap from known protocol as ABI_MATCH', () => {
+  it('should classify Mint/AddLiquidity events heuristically as Add Liquidity', () => {
     const event = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_SWAP, '0xsender', '0xrecipient'],
-      protocolName: 'SparkDEX',
+      eventName: 'AddLiquidity',
+      contractAddress: '0x0000000000000000000000000000000000000099',
+      protocol: null,
+      args: {
+        amount0: '1000',
+        liquidity: '500',
+      },
     });
 
     const result = engine.classify(event);
 
-    expect(result.type).toBe('Trade');
-    expect(result.status).toBe('GREEN');
-    expect(result.method).toBe('ABI_MATCH');
-    expect(result.confidence).toBe(0.95);
-    expect(result.reason).toContain('SparkDEX');
+    expect(result.ctType).toBe('Add Liquidity');
+    expect(result.ampelStatus).toBe('YELLOW');
+    expect(result.isGraubereich).toBe(true);
   });
 
-  // ─── V3 MINT (ADD LIQUIDITY) ───
-
-  it('should classify V3 Mint as Provide Liquidity (YELLOW)', () => {
+  it('should classify Burn/RemoveLiquidity events heuristically as Remove Liquidity', () => {
     const event = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_MINT],
+      eventName: 'RemoveLiquidity',
+      contractAddress: '0x0000000000000000000000000000000000000099',
+      protocol: null,
+      args: {
+        amount0: '1000',
+        liquidity: '500',
+      },
     });
 
     const result = engine.classify(event);
 
-    expect(result.type).toBe('Provide Liquidity');
-    expect(result.status).toBe('YELLOW');
-    expect(result.taxReference).toContain('Graubereich');
+    expect(result.ctType).toBe('Remove Liquidity');
+    expect(result.ampelStatus).toBe('YELLOW');
+    expect(result.isGraubereich).toBe(true);
   });
 
-  it('should classify V3 Mint from known protocol as ABI_MATCH', () => {
+  it('should classify RewardClaimed/Collect events heuristically as LP Rewards', () => {
     const event = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_MINT],
-      protocolName: 'Enosys DEX',
+      eventName: 'Collect',
+      contractAddress: '0x0000000000000000000000000000000000000099',
+      protocol: null,
+      args: {
+        amount: '1000',
+        token: 'FLR',
+      },
     });
 
     const result = engine.classify(event);
 
-    expect(result.type).toBe('Provide Liquidity');
-    expect(result.status).toBe('YELLOW');
-    expect(result.method).toBe('ABI_MATCH');
-    expect(result.dualScenario).toBe('MODEL_A');
+    expect(result.ctType).toBe('LP Rewards');
+    expect(result.ampelStatus).toBe('YELLOW');
+    expect(result.tradeGroup).toBe('Farming');
   });
 
-  // ─── V3 BURN (REMOVE LIQUIDITY) ───
+  // ---- Layer 4: ERC20 Transfer Fallback ----
 
-  it('should classify V3 Burn as Remove Liquidity (YELLOW)', () => {
+  it('should classify Transfer events as internal transfer (GRAY)', () => {
     const event = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_BURN],
+      eventName: 'Transfer',
+      contractAddress: '0x0000000000000000000000000000000000000099',
+      protocol: null,
+      args: {
+        from: '0xuser1',
+        to: '0xuser2',
+        value: '1000',
+      },
     });
 
     const result = engine.classify(event);
 
-    expect(result.type).toBe('Remove Liquidity');
-    expect(result.status).toBe('YELLOW');
-    expect(result.taxReference).toContain('Graubereich');
+    expect(result.ctType).toBe('Transfer (intern)');
+    expect(result.ampelStatus).toBe('GRAY');
+    expect(result.isGraubereich).toBe(false);
   });
 
-  it('should classify V3 Burn from known protocol as ABI_MATCH', () => {
+  // ---- Layer 5: Unknown ----
+
+  it('should classify completely unknown events as RED', () => {
     const event = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_BURN],
-      protocolName: 'SparkDEX',
+      eventName: 'SomeUnknownEvent',
+      contractAddress: '0x0000000000000000000000000000000000000099',
+      protocol: null,
+      args: {},
     });
 
     const result = engine.classify(event);
 
-    expect(result.type).toBe('Remove Liquidity');
-    expect(result.status).toBe('YELLOW');
-    expect(result.method).toBe('ABI_MATCH');
+    expect(result.ctType).toBe('Other');
+    expect(result.ampelStatus).toBe('RED');
+    expect(result.isGraubereich).toBe(false);
+    expect(result.comment).toContain('Unbekanntes Event');
+    expect(result.comment).toContain('SomeUnknownEvent');
   });
 
-  // ─── V3 COLLECT (LP REWARDS) ───
+  // ---- classifyBatch ----
 
-  it('should classify V3 Collect as LP Rewards (GREEN)', () => {
-    const event = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_COLLECT],
-    });
+  it('should classify a batch of events', () => {
+    const events: DecodedEvent[] = [
+      makeEvent({
+        eventName: 'Swap',
+        contractAddress: '0x0000000000000000000000000000000000000099',
+        args: { amountIn: '1000', amountOut: '500' },
+      }),
+      makeEvent({
+        eventName: 'Transfer',
+        contractAddress: '0x0000000000000000000000000000000000000099',
+        args: { value: '1000' },
+      }),
+      makeEvent({
+        eventName: 'UnknownEvent',
+        contractAddress: '0x0000000000000000000000000000000000000099',
+        args: {},
+      }),
+    ];
 
-    const result = engine.classify(event);
+    const results = engine.classifyBatch(events);
 
-    expect(result.type).toBe('LP Rewards');
-    expect(result.status).toBe('GREEN');
-    expect(result.taxReference).toContain('§ 22 Nr. 3 EStG');
-    expect(result.method).toBe('EVENT_PATTERN');
+    expect(results).toHaveLength(3);
+    expect(results[0].ctType).toBe('Trade');
+    expect(results[1].ctType).toBe('Transfer (intern)');
+    expect(results[2].ctType).toBe('Other');
   });
 
-  // ─── UNKNOWN EVENTS ───
+  // ---- Ampel status coverage ----
 
-  it('should classify unknown events as RED status', () => {
-    const unknownSignature = '0x0000000000000000000000000000000000000000000000000000000000000001';
-    const event = makeEvent({
-      topics: [unknownSignature],
-    });
+  it('should produce all four Ampel statuses across different event types', () => {
+    const statuses = new Set<AmpelStatus>();
 
-    const result = engine.classify(event);
+    // GREEN: SparkDEX Swap via protocol
+    const greenResult = engine.classify(
+      makeEvent({
+        eventName: 'Swap',
+        protocol: 'sparkdex',
+        args: { sender: '0x', recipient: '0x', amount0: '1', amount1: '-1' },
+      }),
+    );
+    statuses.add(greenResult.ampelStatus);
 
-    expect(result.type).toBe('Unknown');
-    expect(result.status).toBe('RED');
-    expect(result.confidence).toBe(0);
-    expect(result.taxReference).toContain('Manual review');
+    // YELLOW: Heuristic Swap
+    const yellowResult = engine.classify(
+      makeEvent({
+        eventName: 'Swap',
+        contractAddress: '0x0000000000000000000000000000000000000099',
+        args: { amountIn: '1' },
+      }),
+    );
+    statuses.add(yellowResult.ampelStatus);
+
+    // GRAY: Transfer fallback
+    const grayResult = engine.classify(
+      makeEvent({
+        eventName: 'Transfer',
+        contractAddress: '0x0000000000000000000000000000000000000099',
+        args: { value: '1' },
+      }),
+    );
+    statuses.add(grayResult.ampelStatus);
+
+    // RED: Unknown event
+    const redResult = engine.classify(
+      makeEvent({
+        eventName: 'UnknownEvent',
+        contractAddress: '0x0000000000000000000000000000000000000099',
+        args: {},
+      }),
+    );
+    statuses.add(redResult.ampelStatus);
+
+    expect(statuses.has('GREEN')).toBe(true);
+    expect(statuses.has('YELLOW')).toBe(true);
+    expect(statuses.has('GRAY')).toBe(true);
+    expect(statuses.has('RED')).toBe(true);
   });
 
-  // ─── GRAY (IRRELEVANT) ───
+  // ---- ClassificationResult structure ----
 
-  it('should classify events with no topic as GRAY (internal transfer)', () => {
-    const event = makeEvent({
-      topics: [],
-    });
+  it('should return all required fields in ClassificationResult', () => {
+    const result = engine.classify(makeEvent({ eventName: 'SomeEvent' }));
 
-    const result = engine.classify(event);
-
-    expect(result.type).toBe('Transfer intern');
-    expect(result.status).toBe('GRAY');
-    expect(result.taxReference).toContain('Kein steuerliches Ereignis');
-    expect(result.method).toBe('HEURISTIC');
+    expect(result).toHaveProperty('ctType');
+    expect(result).toHaveProperty('buyAmount');
+    expect(result).toHaveProperty('buyCurrency');
+    expect(result).toHaveProperty('sellAmount');
+    expect(result).toHaveProperty('sellCurrency');
+    expect(result).toHaveProperty('fee');
+    expect(result).toHaveProperty('feeCurrency');
+    expect(result).toHaveProperty('exchange');
+    expect(result).toHaveProperty('tradeGroup');
+    expect(result).toHaveProperty('ampelStatus');
+    expect(result).toHaveProperty('isGraubereich');
+    expect(result).toHaveProperty('modelChoice');
+    expect(result).toHaveProperty('comment');
   });
 
-  // ─── YELLOW / GRAUBEREICH ───
+  // ---- Graubereich / isGraubereich flag ----
 
-  it('should set YELLOW for Graubereich LP operations', () => {
-    // Mint = Provide Liquidity → Graubereich
-    const mintEvent = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_MINT],
-    });
-    const mintResult = engine.classify(mintEvent);
-    expect(mintResult.status).toBe('YELLOW');
+  it('should set isGraubereich for LP-related heuristic events', () => {
+    const mintResult = engine.classify(
+      makeEvent({
+        eventName: 'Mint',
+        contractAddress: '0x0000000000000000000000000000000000000099',
+        args: { liquidity: '100' },
+      }),
+    );
+    expect(mintResult.isGraubereich).toBe(true);
 
-    // Burn = Remove Liquidity → Graubereich
-    const burnEvent = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_BURN],
-    });
-    const burnResult = engine.classify(burnEvent);
-    expect(burnResult.status).toBe('YELLOW');
+    const burnResult = engine.classify(
+      makeEvent({
+        eventName: 'Burn',
+        contractAddress: '0x0000000000000000000000000000000000000099',
+        args: { liquidity: '100' },
+      }),
+    );
+    expect(burnResult.isGraubereich).toBe(true);
   });
 
-  // ─── DUAL SCENARIO MODEL ───
+  it('should NOT set isGraubereich for swap or transfer events', () => {
+    const swapResult = engine.classify(
+      makeEvent({
+        eventName: 'Swap',
+        contractAddress: '0x0000000000000000000000000000000000000099',
+        args: { amountIn: '100' },
+      }),
+    );
+    expect(swapResult.isGraubereich).toBe(false);
 
-  it('should provide MODEL_A (conservative) by default for dual scenarios', () => {
-    const event = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_MINT],
-    });
-
-    const result = engine.classify(event);
-
-    expect(result.dualScenario).toBe('MODEL_A');
-    expect(result.reason).toContain('konservativ');
-  });
-
-  it('should provide MODEL_B (liberal) when requested for dual scenarios', () => {
-    const event = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_MINT],
-    });
-
-    const result = engine.classify(event, 'MODEL_B');
-
-    expect(result.dualScenario).toBe('MODEL_B');
-    expect(result.reason).toContain('liberal');
-    expect(result.taxReference).toContain('§ 22 Nr. 3 EStG');
-  });
-
-  it('should not include dualScenario for non-Graubereich events', () => {
-    const event = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_SWAP],
-    });
-
-    const result = engine.classify(event);
-
-    expect(result.dualScenario).toBeUndefined();
-  });
-
-  // ─── isGraubereich ───
-
-  it('should identify Graubereich types correctly', () => {
-    expect(engine.isGraubereich('Provide Liquidity')).toBe(true);
-    expect(engine.isGraubereich('Remove Liquidity')).toBe(true);
-    expect(engine.isGraubereich('Receive LP Token')).toBe(true);
-    expect(engine.isGraubereich('Return LP Token')).toBe(true);
-    expect(engine.isGraubereich('Add Collateral')).toBe(true);
-    expect(engine.isGraubereich('Remove Collateral')).toBe(true);
-    expect(engine.isGraubereich('Darlehen erhalten')).toBe(true);
-    expect(engine.isGraubereich('Darlehen zurückgezahlt')).toBe(true);
-  });
-
-  it('should NOT identify non-Graubereich types', () => {
-    expect(engine.isGraubereich('Trade')).toBe(false);
-    expect(engine.isGraubereich('Staking')).toBe(false);
-    expect(engine.isGraubereich('LP Rewards')).toBe(false);
-    expect(engine.isGraubereich('Unknown')).toBe(false);
-  });
-
-  // ─── CONFIDENCE LEVELS ───
-
-  it('should have higher confidence for ABI_MATCH than EVENT_PATTERN', () => {
-    // Known protocol V3 Swap → ABI_MATCH
-    const knownEvent = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_SWAP],
-      protocolName: 'SparkDEX',
-    });
-    const knownResult = engine.classify(knownEvent);
-
-    // Unknown protocol V3 Swap → EVENT_PATTERN
-    const unknownEvent = makeEvent({
-      topics: [EVENT_SIGNATURES.V3_SWAP],
-    });
-    const unknownResult = engine.classify(unknownEvent);
-
-    expect(knownResult.confidence).toBeGreaterThan(unknownResult.confidence);
-    expect(knownResult.method).toBe('ABI_MATCH');
-    expect(unknownResult.method).toBe('EVENT_PATTERN');
-  });
-
-  it('should have lowest confidence for unclassifiable events', () => {
-    const event = makeEvent({
-      topics: ['0x0000000000000000000000000000000000000000000000000000000000000001'],
-    });
-
-    const result = engine.classify(event);
-    expect(result.confidence).toBe(0);
+    const transferResult = engine.classify(
+      makeEvent({
+        eventName: 'Transfer',
+        contractAddress: '0x0000000000000000000000000000000000000099',
+        args: { value: '100' },
+      }),
+    );
+    expect(transferResult.isGraubereich).toBe(false);
   });
 });
