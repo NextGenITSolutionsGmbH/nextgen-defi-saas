@@ -1,0 +1,320 @@
+[
+  {
+    "type": "SparkDEX swap",
+    "txHash": "0xabc001def234567890abcdef1234567890abcdef1234567890abcdef12345001",
+    "blockNumber": 28100001,
+    "blockTimestamp": 1710000001,
+    "protocol": "SparkDEX",
+    "from": "0x1234567890abcdef1234567890abcdef12345678",
+    "to": "0xSparkDEXRouter0000000000000000000000001",
+    "value": "0",
+    "legs": [
+      {
+        "direction": "OUT",
+        "tokenAddress": "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d",
+        "tokenSymbol": "WFLR",
+        "amount": "1500.000000000000000000",
+        "eurValue": "30.750000000000"
+      },
+      {
+        "direction": "IN",
+        "tokenAddress": "0x12e605bc104e93B45e1aD99F9e555f659051c2BB",
+        "tokenSymbol": "USDT",
+        "amount": "30.500000",
+        "eurValue": "28.975000000000"
+      }
+    ],
+    "classification": {
+      "ctType": "swap",
+      "sellAmount": "1500.000000000000000000",
+      "sellCurrency": "WFLR",
+      "buyAmount": "30.500000",
+      "buyCurrency": "USDT",
+      "fee": "0.003000000000000000",
+      "feeCurrency": "WFLR"
+    }
+  },
+  {
+    "type": "Enosys swap",
+    "txHash": "0xabc002def234567890abcdef1234567890abcdef1234567890abcdef12345002",
+    "blockNumber": 28100050,
+    "blockTimestamp": 1710000100,
+    "protocol": "Enosys",
+    "from": "0x1234567890abcdef1234567890abcdef12345678",
+    "to": "0xEnosysRouter000000000000000000000000001",
+    "value": "0",
+    "legs": [
+      {
+        "direction": "OUT",
+        "tokenAddress": "0x12e605bc104e93B45e1aD99F9e555f659051c2BB",
+        "tokenSymbol": "USDT",
+        "amount": "25.000000",
+        "eurValue": "23.750000000000"
+      },
+      {
+        "direction": "IN",
+        "tokenAddress": "0x96B41289D90444B8adD57e6F265DB5aE8651c44F",
+        "tokenSymbol": "WSGB",
+        "amount": "5000.000000000000000000",
+        "eurValue": "24.000000000000"
+      }
+    ],
+    "classification": {
+      "ctType": "swap",
+      "sellAmount": "25.000000",
+      "sellCurrency": "USDT",
+      "buyAmount": "5000.000000000000000000",
+      "buyCurrency": "WSGB",
+      "fee": "0.050000",
+      "feeCurrency": "USDT"
+    }
+  },
+  {
+    "type": "Kinetic supply",
+    "txHash": "0xabc003def234567890abcdef1234567890abcdef1234567890abcdef12345003",
+    "blockNumber": 28100200,
+    "blockTimestamp": 1710000500,
+    "protocol": "Kinetic",
+    "from": "0x1234567890abcdef1234567890abcdef12345678",
+    "to": "0xKineticLendingPool00000000000000000001",
+    "value": "0",
+    "legs": [
+      {
+        "direction": "OUT",
+        "tokenAddress": "0x12e605bc104e93B45e1aD99F9e555f659051c2BB",
+        "tokenSymbol": "USDT",
+        "amount": "500.000000",
+        "eurValue": "475.000000000000"
+      },
+      {
+        "direction": "IN",
+        "tokenAddress": "0xKineticUSDTReceipt000000000000000001",
+        "tokenSymbol": "kUSDT",
+        "amount": "500.000000",
+        "eurValue": "475.000000000000"
+      }
+    ],
+    "classification": {
+      "ctType": "supply",
+      "sellAmount": "500.000000",
+      "sellCurrency": "USDT",
+      "buyAmount": "500.000000",
+      "buyCurrency": "kUSDT",
+      "fee": "0.000000",
+      "feeCurrency": "USDT"
+    }
+  },
+  {
+    "type": "FlareDrops claim",
+    "txHash": "0xabc004def234567890abcdef1234567890abcdef1234567890abcdef12345004",
+    "blockNumber": 28100400,
+    "blockTimestamp": 1710001000,
+    "protocol": "FlareDrops",
+    "from": "0x1234567890abcdef1234567890abcdef12345678",
+    "to": "0xFlareDropDistributor000000000000000001",
+    "value": "0",
+    "legs": [
+      {
+        "direction": "IN",
+        "tokenAddress": "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d",
+        "tokenSymbol": "WFLR",
+        "amount": "2500.000000000000000000",
+        "eurValue": "51.250000000000"
+      }
+    ],
+    "classification": {
+      "ctType": "airdrop",
+      "buyAmount": "2500.000000000000000000",
+      "buyCurrency": "WFLR",
+      "fee": "0.001500000000000000",
+      "feeCurrency": "FLR"
+    }
+  },
+  {
+    "type": "FTSO staking delegation reward",
+    "txHash": "0xabc005def234567890abcdef1234567890abcdef1234567890abcdef12345005",
+    "blockNumber": 28100600,
+    "blockTimestamp": 1710002000,
+    "protocol": "FTSO",
+    "from": "0x0000000000000000000000000000000000000000",
+    "to": "0x1234567890abcdef1234567890abcdef12345678",
+    "value": "750000000000000000000",
+    "legs": [
+      {
+        "direction": "IN",
+        "tokenAddress": "0x0000000000000000000000000000000000000000",
+        "tokenSymbol": "FLR",
+        "amount": "750.000000000000000000",
+        "eurValue": "15.375000000000"
+      }
+    ],
+    "classification": {
+      "ctType": "staking_reward",
+      "buyAmount": "750.000000000000000000",
+      "buyCurrency": "FLR",
+      "fee": "0.000000000000000000",
+      "feeCurrency": "FLR"
+    }
+  },
+  {
+    "type": "LP provide (SparkDEX)",
+    "txHash": "0xabc006def234567890abcdef1234567890abcdef1234567890abcdef12345006",
+    "blockNumber": 28100800,
+    "blockTimestamp": 1710003000,
+    "protocol": "SparkDEX",
+    "from": "0x1234567890abcdef1234567890abcdef12345678",
+    "to": "0xSparkDEXPool00000000000000000000000001",
+    "value": "0",
+    "legs": [
+      {
+        "direction": "OUT",
+        "tokenAddress": "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d",
+        "tokenSymbol": "WFLR",
+        "amount": "10000.000000000000000000",
+        "eurValue": "205.000000000000"
+      },
+      {
+        "direction": "OUT",
+        "tokenAddress": "0x12e605bc104e93B45e1aD99F9e555f659051c2BB",
+        "tokenSymbol": "USDT",
+        "amount": "200.000000",
+        "eurValue": "190.000000000000"
+      },
+      {
+        "direction": "IN",
+        "tokenAddress": "0xSparkDEXLPToken0000000000000000000001",
+        "tokenSymbol": "SPARK-LP",
+        "amount": "1414.213562373095048802",
+        "eurValue": "395.000000000000"
+      }
+    ],
+    "classification": {
+      "ctType": "lp_provide",
+      "sellAmount": "10000.000000000000000000",
+      "sellCurrency": "WFLR",
+      "buyAmount": "1414.213562373095048802",
+      "buyCurrency": "SPARK-LP",
+      "fee": "0.005000000000000000",
+      "feeCurrency": "WFLR"
+    }
+  },
+  {
+    "type": "LP remove (SparkDEX)",
+    "txHash": "0xabc007def234567890abcdef1234567890abcdef1234567890abcdef12345007",
+    "blockNumber": 28101000,
+    "blockTimestamp": 1710004000,
+    "protocol": "SparkDEX",
+    "from": "0x1234567890abcdef1234567890abcdef12345678",
+    "to": "0xSparkDEXPool00000000000000000000000001",
+    "value": "0",
+    "legs": [
+      {
+        "direction": "OUT",
+        "tokenAddress": "0xSparkDEXLPToken0000000000000000000001",
+        "tokenSymbol": "SPARK-LP",
+        "amount": "500.000000000000000000",
+        "eurValue": "140.000000000000"
+      },
+      {
+        "direction": "IN",
+        "tokenAddress": "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d",
+        "tokenSymbol": "WFLR",
+        "amount": "3500.000000000000000000",
+        "eurValue": "71.750000000000"
+      },
+      {
+        "direction": "IN",
+        "tokenAddress": "0x12e605bc104e93B45e1aD99F9e555f659051c2BB",
+        "tokenSymbol": "USDT",
+        "amount": "70.000000",
+        "eurValue": "66.500000000000"
+      }
+    ],
+    "classification": {
+      "ctType": "lp_remove",
+      "sellAmount": "500.000000000000000000",
+      "sellCurrency": "SPARK-LP",
+      "buyAmount": "3500.000000000000000000",
+      "buyCurrency": "WFLR",
+      "fee": "0.000000000000000000",
+      "feeCurrency": "WFLR"
+    }
+  },
+  {
+    "type": "Bridge (LayerZero to Flare)",
+    "txHash": "0xabc008def234567890abcdef1234567890abcdef1234567890abcdef12345008",
+    "blockNumber": 28101200,
+    "blockTimestamp": 1710005000,
+    "protocol": "LayerZero",
+    "from": "0xLayerZeroBridge00000000000000000000001",
+    "to": "0x1234567890abcdef1234567890abcdef12345678",
+    "value": "0",
+    "legs": [
+      {
+        "direction": "IN",
+        "tokenAddress": "0x12e605bc104e93B45e1aD99F9e555f659051c2BB",
+        "tokenSymbol": "USDT",
+        "amount": "1000.000000",
+        "eurValue": "950.000000000000"
+      }
+    ],
+    "classification": {
+      "ctType": "bridge_in",
+      "buyAmount": "1000.000000",
+      "buyCurrency": "USDT",
+      "fee": "0.500000",
+      "feeCurrency": "USDT"
+    }
+  },
+  {
+    "type": "Token approval",
+    "txHash": "0xabc009def234567890abcdef1234567890abcdef1234567890abcdef12345009",
+    "blockNumber": 28101300,
+    "blockTimestamp": 1710005500,
+    "protocol": null,
+    "from": "0x1234567890abcdef1234567890abcdef12345678",
+    "to": "0x12e605bc104e93B45e1aD99F9e555f659051c2BB",
+    "value": "0",
+    "legs": [],
+    "classification": {
+      "ctType": "approval",
+      "fee": "0.000800000000000000",
+      "feeCurrency": "FLR"
+    }
+  },
+  {
+    "type": "Internal transaction (contract self-call)",
+    "txHash": "0xabc010def234567890abcdef1234567890abcdef1234567890abcdef12345010",
+    "blockNumber": 28101400,
+    "blockTimestamp": 1710006000,
+    "protocol": null,
+    "from": "0x1234567890abcdef1234567890abcdef12345678",
+    "to": "0x1234567890abcdef1234567890abcdef12345678",
+    "value": "100000000000000000000",
+    "legs": [
+      {
+        "direction": "OUT",
+        "tokenAddress": "0x0000000000000000000000000000000000000000",
+        "tokenSymbol": "FLR",
+        "amount": "100.000000000000000000",
+        "eurValue": "2.050000000000"
+      },
+      {
+        "direction": "IN",
+        "tokenAddress": "0x0000000000000000000000000000000000000000",
+        "tokenSymbol": "FLR",
+        "amount": "100.000000000000000000",
+        "eurValue": "2.050000000000"
+      }
+    ],
+    "classification": {
+      "ctType": "internal",
+      "sellAmount": "100.000000000000000000",
+      "sellCurrency": "FLR",
+      "buyAmount": "100.000000000000000000",
+      "buyCurrency": "FLR",
+      "fee": "0.001200000000000000",
+      "feeCurrency": "FLR"
+    }
+  }
+]

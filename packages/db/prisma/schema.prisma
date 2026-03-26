@@ -1,0 +1,347 @@
+// ---------------------------------------------------------------
+// DeFi Tracker SaaS  --  Prisma Schema
+// Database: PostgreSQL
+// Convention: camelCase models, snake_case DB columns / tables
+// ---------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================  ENUMS  ==============================
+
+enum PlanTier {
+  STARTER
+  PRO
+  BUSINESS
+  KANZLEI
+
+  @@map("plan_tier")
+}
+
+enum SyncStatus {
+  IDLE
+  SYNCING
+  COMPLETED
+  ERROR
+
+  @@map("sync_status")
+}
+
+enum TxStatus {
+  GREEN
+  YELLOW
+  RED
+  GRAY
+
+  @@map("tx_status")
+}
+
+enum Direction {
+  IN
+  OUT
+
+  @@map("direction")
+}
+
+enum PriceSource {
+  FTSO
+  COINGECKO
+  CMC
+  MANUAL
+
+  @@map("price_source")
+}
+
+enum ModelChoice {
+  MODEL_A
+  MODEL_B
+
+  @@map("model_choice")
+}
+
+enum TaxMethod {
+  FIFO
+  LIFO
+  HIFO
+
+  @@map("tax_method")
+}
+
+enum TaxEventType {
+  PARAGRAPH_23
+  PARAGRAPH_22_NR3
+
+  @@map("tax_event_type")
+}
+
+enum LotStatus {
+  OPEN
+  CLOSED
+  PARTIAL
+
+  @@map("lot_status")
+}
+
+enum ExportFormat {
+  CSV
+  XLSX
+  PDF
+
+  @@map("export_format")
+}
+
+enum ExportStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+
+  @@map("export_status")
+}
+
+enum SubStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+
+  @@map("sub_status")
+}
+
+// ========================  MODELS  =============================
+
+/// 1. User
+model User {
+  id           String    @id @default(uuid()) @map("id") @db.Uuid
+  email        String    @unique @map("email") @db.VarChar(320)
+  passwordHash String    @map("password_hash") @db.Text
+  plan         PlanTier  @default(STARTER) @map("plan")
+  totpSecret   String?   @map("totp_secret") @db.VarChar(128)
+  totpEnabled  Boolean   @default(false) @map("totp_enabled")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  wallets       Wallet[]
+  taxLots       TaxLot[]
+  taxEvents     TaxEvent[]
+  exports       Export[]
+  subscriptions Subscription[]
+
+  @@map("users")
+}
+
+/// 2. Wallet
+model Wallet {
+  id            String     @id @default(uuid()) @map("id") @db.Uuid
+  userId        String     @map("user_id") @db.Uuid
+  address       String     @map("address") @db.VarChar(42)
+  chainId       Int        @default(14) @map("chain_id")
+  label         String?    @map("label") @db.VarChar(100)
+  lastSyncAt    DateTime?  @map("last_sync_at") @db.Timestamptz
+  lastSyncBlock BigInt?    @map("last_sync_block")
+  syncStatus    SyncStatus @default(IDLE) @map("sync_status")
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([address, chainId], map: "uq_wallet_address_chain")
+  @@map("wallets")
+}
+
+/// 3. Transaction
+model Transaction {
+  id             String   @id @default(uuid()) @map("id") @db.Uuid
+  walletId       String   @map("wallet_id") @db.Uuid
+  txHash         String   @unique @map("tx_hash") @db.VarChar(66)
+  blockNumber    BigInt   @map("block_number")
+  blockTimestamp BigInt   @map("block_timestamp")
+  protocol       String?  @map("protocol") @db.VarChar(100)
+  rawData        Json?    @map("raw_data")
+  status         TxStatus @default(GRAY) @map("status")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  wallet          Wallet             @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  legs            TxLeg[]
+  classifications TxClassification[]
+
+  @@index([walletId, blockTimestamp], map: "idx_tx_wallet_timestamp")
+  @@index([walletId, protocol], map: "idx_tx_wallet_protocol")
+  @@map("transactions")
+}
+
+/// 4. TxLeg
+model TxLeg {
+  id            String    @id @default(uuid()) @map("id") @db.Uuid
+  transactionId String    @map("transaction_id") @db.Uuid
+  legIndex      Int       @map("leg_index")
+  direction     Direction @map("direction")
+  tokenAddress  String    @map("token_address") @db.VarChar(42)
+  tokenSymbol   String    @map("token_symbol") @db.VarChar(20)
+  amount        Decimal   @map("amount") @db.Decimal(36, 18)
+  eurValue      Decimal?  @map("eur_value") @db.Decimal(28, 10)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("tx_legs")
+}
+
+/// 5. TxClassification
+model TxClassification {
+  id             String       @id @default(uuid()) @map("id") @db.Uuid
+  transactionId  String       @map("transaction_id") @db.Uuid
+  ctType         String       @map("ct_type") @db.VarChar(50)
+  buyAmount      Decimal?     @map("buy_amount") @db.Decimal(36, 18)
+  buyCurrency    String?      @map("buy_currency") @db.VarChar(20)
+  sellAmount     Decimal?     @map("sell_amount") @db.Decimal(36, 18)
+  sellCurrency   String?      @map("sell_currency") @db.VarChar(20)
+  fee            Decimal?     @map("fee") @db.Decimal(36, 18)
+  feeCurrency    String?      @map("fee_currency") @db.VarChar(20)
+  eurBuyValue    Decimal?     @map("eur_buy_value") @db.Decimal(28, 10)
+  eurSellValue   Decimal?     @map("eur_sell_value") @db.Decimal(28, 10)
+  priceSource    PriceSource  @map("price_source")
+  modelChoice    ModelChoice? @map("model_choice")
+  isManual       Boolean      @default(false) @map("is_manual")
+  comment        String?      @map("comment") @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  taxEvents   TaxEvent[]
+
+  @@map("tx_classifications")
+}
+
+/// 6. TokenPrice
+model TokenPrice {
+  id            String      @id @default(uuid()) @map("id") @db.Uuid
+  tokenSymbol   String      @map("token_symbol") @db.VarChar(20)
+  tokenAddress  String      @map("token_address") @db.VarChar(42)
+  chainId       Int         @map("chain_id")
+  timestampUnix BigInt      @map("timestamp_unix")
+  eurPrice      Decimal     @map("eur_price") @db.Decimal(28, 10)
+  source        PriceSource @map("source")
+  sourceUrl     String?     @map("source_url") @db.Text
+
+  @@unique([tokenSymbol, chainId, timestampUnix], map: "uq_token_price_symbol_chain_ts")
+  @@map("token_prices")
+}
+
+/// 7. TaxLot
+model TaxLot {
+  id                 String    @id @default(uuid()) @map("id") @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  tokenSymbol        String    @map("token_symbol") @db.VarChar(20)
+  tokenAddress       String    @map("token_address") @db.VarChar(42)
+  amount             Decimal   @map("amount") @db.Decimal(36, 18)
+  acquisitionCostEur Decimal   @map("acquisition_cost_eur") @db.Decimal(28, 10)
+  acquisitionDate    DateTime  @map("acquisition_date") @db.Timestamptz
+  remainingAmount    Decimal   @map("remaining_amount") @db.Decimal(36, 18)
+  method             TaxMethod @map("method")
+  disposalDate       DateTime? @map("disposal_date") @db.Timestamptz
+  lotStatus          LotStatus @default(OPEN) @map("lot_status")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taxEvents TaxEvent[]
+
+  @@index([userId, tokenSymbol, acquisitionDate], map: "idx_tax_lot_user_symbol_date")
+  @@map("tax_lots")
+}
+
+/// 8. TaxEvent
+model TaxEvent {
+  id                   String       @id @default(uuid()) @map("id") @db.Uuid
+  userId               String       @map("user_id") @db.Uuid
+  txClassificationId   String       @map("tx_classification_id") @db.Uuid
+  taxLotId             String?      @map("tax_lot_id") @db.Uuid
+  eventType            TaxEventType @map("event_type")
+  gainLossEur          Decimal      @map("gain_loss_eur") @db.Decimal(28, 10)
+  holdingPeriodDays    Int?         @map("holding_period_days")
+  taxYear              Int          @map("tax_year")
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  txClassification TxClassification @relation(fields: [txClassificationId], references: [id], onDelete: Cascade)
+  taxLot           TaxLot?          @relation(fields: [taxLotId], references: [id], onDelete: SetNull)
+
+  @@index([userId, taxYear], map: "idx_tax_event_user_year")
+  @@map("tax_events")
+}
+
+/// 9. AuditLog
+model AuditLog {
+  id           BigInt   @id @default(autoincrement()) @map("id")
+  entityType   String   @map("entity_type") @db.VarChar(50)
+  entityId     String   @map("entity_id") @db.VarChar(64)
+  action       String   @map("action") @db.VarChar(50)
+  fieldChanged String?  @map("field_changed") @db.VarChar(100)
+  oldValue     String?  @map("old_value") @db.Text
+  newValue     String?  @map("new_value") @db.Text
+  changedBy    String   @map("changed_by") @db.Uuid
+  changedAt    DateTime @default(now()) @map("changed_at") @db.Timestamptz
+  sha256Hash   String   @unique @map("sha256_hash") @db.VarChar(64)
+  prevHash     String?  @map("prev_hash") @db.VarChar(64)
+
+  @@index([entityType, entityId], map: "idx_audit_entity")
+  @@map("audit_logs")
+}
+
+/// 10. Export
+model Export {
+  id          String       @id @default(uuid()) @map("id") @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  taxYear     Int          @map("tax_year")
+  method      TaxMethod    @map("method")
+  format      ExportFormat @map("format")
+  filePath    String?      @map("file_path") @db.Text
+  fileHash    String?      @map("file_hash") @db.VarChar(64)
+  rowCount    Int?         @map("row_count")
+  generatedAt DateTime     @map("generated_at") @db.Timestamptz
+  status      ExportStatus @default(PENDING) @map("status")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, taxYear], map: "idx_export_user_year")
+  @@map("exports")
+}
+
+/// 11. PriceAuditLog
+model PriceAuditLog {
+  id              String      @id @default(uuid()) @map("id") @db.Uuid
+  tokenSymbol     String      @map("token_symbol") @db.VarChar(20)
+  timestampUnix   BigInt      @map("timestamp_unix")
+  attemptedSource String      @map("attempted_source") @db.VarChar(30)
+  resultSource    String      @map("result_source") @db.VarChar(30)
+  eurPrice        Decimal     @map("eur_price") @db.Decimal(28, 10)
+  fallbackReason  String?     @map("fallback_reason") @db.Text
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([tokenSymbol, timestampUnix], map: "idx_price_audit_symbol_ts")
+  @@map("price_audit_logs")
+}
+
+/// 12. Subscription
+model Subscription {
+  id                 String    @id @default(uuid()) @map("id") @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  plan               PlanTier  @map("plan")
+  status             SubStatus @map("status")
+  stripeSubId        String?   @unique @map("stripe_sub_id") @db.VarChar(255)
+  currentPeriodStart DateTime  @map("current_period_start") @db.Timestamptz
+  currentPeriodEnd   DateTime  @map("current_period_end") @db.Timestamptz
+  cancelAt           DateTime? @map("cancel_at") @db.Timestamptz
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}

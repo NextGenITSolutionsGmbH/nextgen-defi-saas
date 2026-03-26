@@ -1,0 +1,62 @@
+name: Performance Tests
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Target URL for k6 tests"
+        required: false
+        default: ""
+
+env:
+  K6_TARGET_URL: ${{ github.event.inputs.target_url || secrets.STAGING_URL }}
+
+jobs:
+  k6:
+    name: k6 Load Tests
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq k6
+
+      - name: Run k6 smoke tests
+        run: |
+          k6 run \
+            --out json=k6-results.json \
+            --tag testid=smoke-${{ github.run_id }} \
+            --env TARGET_URL="${K6_TARGET_URL}" \
+            tests/k6/smoke.js
+
+      - name: Upload k6 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results-${{ github.run_id }}
+          path: k6-results.json
+          retention-days: 30
+
+      - name: Post summary
+        if: always()
+        run: |
+          echo "## k6 Performance Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Run ID:** ${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Target:** ${K6_TARGET_URL}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Triggered by:** ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f k6-results.json ]; then
+            echo "Results artifact uploaded successfully." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No results file found." >> "$GITHUB_STEP_SUMMARY"
+          fi

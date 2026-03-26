@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+RUN apk add --no-cache libc6-compat
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# Install dependencies first for better layer caching
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/web/package.json ./apps/web/package.json
+COPY packages/ ./packages/
+
+RUN pnpm install
+
+# Source code is mounted as a volume at runtime for hot-reload
+EXPOSE 3000
+
+CMD ["pnpm", "dev", "--filter", "web"]

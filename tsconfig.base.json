@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "strict": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "paths": {
+      "@defi-tracker/db": ["./packages/db/src"],
+      "@defi-tracker/shared": ["./packages/shared/src"],
+      "@defi-tracker/ui": ["./packages/ui/src"],
+      "@defi-tracker/config": ["./packages/config"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next", ".turbo"]
+}

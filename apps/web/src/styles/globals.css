@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Semantic color tokens — Light mode */
+    --color-bg-primary: #ffffff;
+    --color-bg-secondary: #E8EEF5;
+    --color-bg-tertiary: #C8D8E8;
+    --color-bg-card: #ffffff;
+    --color-bg-sidebar: #0F1E35;
+    --color-bg-overlay: rgba(8, 15, 26, 0.5);
+
+    --color-border-default: #C8D8E8;
+    --color-border-subtle: #E8EEF5;
+    --color-border-strong: #9AB0C8;
+
+    --color-text-primary: #0F1E35;
+    --color-text-secondary: #2E4A6E;
+    --color-text-tertiary: #5A7A9E;
+    --color-text-inverse: #ffffff;
+    --color-text-link: #2E6FFF;
+
+    --color-accent-primary: #2E6FFF;
+    --color-accent-primary-hover: #3B7BFF;
+    --color-accent-secondary: #1A4FBF;
+    --color-accent-success: #00B56A;
+    --color-accent-warning: #F5A623;
+    --color-accent-danger: #EF4444;
+    --color-accent-info: #00C2D1;
+
+    --color-focus-ring: #2E6FFF;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+    --shadow-dropdown: 0 10px 30px rgba(0, 0, 0, 0.15);
+  }
+
+  .dark {
+    --color-bg-primary: #080F1A;
+    --color-bg-secondary: #0F1E35;
+    --color-bg-tertiary: #1A2E4A;
+    --color-bg-card: #0F1E35;
+    --color-bg-sidebar: #080F1A;
+    --color-bg-overlay: rgba(8, 15, 26, 0.7);
+
+    --color-border-default: #2E4A6E;
+    --color-border-subtle: #1A2E4A;
+    --color-border-strong: #5A7A9E;
+
+    --color-text-primary: #E8EEF5;
+    --color-text-secondary: #C8D8E8;
+    --color-text-tertiary: #9AB0C8;
+    --color-text-inverse: #080F1A;
+    --color-text-link: #3B7BFF;
+
+    --color-accent-primary: #2E6FFF;
+    --color-accent-primary-hover: #3B7BFF;
+    --color-accent-secondary: #1A4FBF;
+    --color-accent-success: #00D47A;
+    --color-accent-warning: #F5B840;
+    --color-accent-danger: #FF5555;
+    --color-accent-info: #10D8E8;
+
+    --color-focus-ring: #3B7BFF;
+
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+    --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-dropdown: 0 10px 30px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Base styles */
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border-default);
+  }
+
+  html {
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-family: Calibri, Candara, "Segoe UI", Optima, Arial, sans-serif;
+  }
+
+  /* Focus visible ring utility */
+  :focus-visible {
+    outline: 3px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-bg-secondary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: var(--radius-sm);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-tertiary);
+  }
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
