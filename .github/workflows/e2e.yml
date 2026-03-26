@@ -84,8 +84,18 @@ jobs:
       - name: Build web application
         run: pnpm turbo build --filter=@defi-tracker/web
 
+      - name: Install Playwright system dependencies
+        run: |
+          # Switch apt to HTTPS (HTTP port 80 is firewalled on runner)
+          if [ -f /etc/apt/sources.list ]; then
+            sed -i 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' /etc/apt/sources.list
+            sed -i 's|http://security.ubuntu.com|https://security.ubuntu.com|g' /etc/apt/sources.list
+          fi
+          apt-get update -y
+          npx playwright install-deps chromium
+
       - name: Install Playwright browsers
-        run: pnpm dlx playwright install chromium
+        run: npx playwright install chromium
 
       - name: Run E2E tests
         run: npx playwright test --config tests/e2e/playwright.config.ts
