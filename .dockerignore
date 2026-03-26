@@ -1,0 +1,14 @@
+node_modules
+.git
+.next
+.turbo
+coverage
+*.log
+.env
+.env.*
+!.env.example
+docker-compose.override.yml
+playwright-report
+test-results
+.claude
+datasource
