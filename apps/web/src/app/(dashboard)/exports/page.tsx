@@ -314,7 +314,7 @@ export default function ExportsPage() {
               </label>
               {!selectAll && (
                 <div className="ml-4 space-y-2 border-l-2 border-[var(--color-border-default)] pl-4">
-                  {wallets.map((w) => (
+                  {wallets.map((w: { id: string; address: string; label: string | null }) => (
                     <label
                       key={w.id}
                       className="flex cursor-pointer items-center gap-2"
