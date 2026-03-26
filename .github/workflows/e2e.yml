@@ -85,7 +85,7 @@ jobs:
         run: pnpm turbo build --filter=@defi-tracker/web
 
       - name: Install Playwright browsers
-        run: pnpm dlx playwright install chromium --with-deps
+        run: pnpm dlx playwright install chromium
 
       - name: Run E2E tests
         run: pnpm turbo test:e2e
