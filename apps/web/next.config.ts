@@ -13,7 +13,8 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: false,
+    // Type checking done in CI — Docker builds skip to avoid Coolify ARG injection issues
+    ignoreBuildErrors: true,
   },
 };
 
