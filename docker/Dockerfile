@@ -1,29 +1,19 @@
-# ── Stage 1: Install dependencies ─────────────────────────────────────────────
-FROM node:20-alpine AS deps
+# ── Stage 1: Install and Build ───────────────────────────────────────────────
+FROM node:20-alpine AS builder
 RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY apps/web/package.json ./apps/web/package.json
-COPY packages/ ./packages/
-
-# Force NODE_ENV=development during install so devDependencies (turbo, typescript) are included
-ENV NODE_ENV=development
-RUN pnpm install --frozen-lockfile
-ENV NODE_ENV=production
-
-# ── Stage 2: Build the application ───────────────────────────────────────────
-FROM node:20-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@latest --activate
-WORKDIR /app
-
-COPY --from=deps /app/ ./
+# Copy all workspace files
 COPY . .
 
+# Install ALL dependencies (dev + prod) — needed for turbo, typescript, etc.
+RUN NODE_ENV=development pnpm install --frozen-lockfile
+
+# Build the web app
 RUN pnpm turbo build --filter=@defi-tracker/web
 
-# ── Stage 3: Production runner ───────────────────────────────────────────────
+# ── Stage 2: Production runner ───────────────────────────────────────────────
 FROM node:20-alpine AS runner
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
@@ -35,8 +25,6 @@ ENV HOSTNAME="0.0.0.0"
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
-
-COPY --from=builder /app/apps/web/public ./public
 
 # Standalone output from Next.js
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
