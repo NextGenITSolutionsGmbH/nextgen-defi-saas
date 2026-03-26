@@ -20,12 +20,39 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Wait for CI workflow to succeed
-        uses: lewagon/wait-on-check-action@v1.3.4
+        uses: actions/github-script@v7
         with:
-          ref: ${{ github.sha }}
-          check-name: "Lint & Test"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 15
+          script: |
+            const sha = context.sha;
+            const checkName = 'Lint & Test';
+            const maxAttempts = 60;
+            const interval = 15000;
+
+            for (let i = 0; i < maxAttempts; i++) {
+              const { data } = await github.rest.checks.listForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: sha,
+                check_name: checkName,
+              });
+
+              const check = data.check_runs[0];
+              if (check) {
+                console.log(`Attempt ${i + 1}: ${check.name} — status=${check.status}, conclusion=${check.conclusion}`);
+                if (check.status === 'completed') {
+                  if (check.conclusion === 'success') {
+                    console.log('CI check passed!');
+                    return;
+                  }
+                  throw new Error(`CI check failed with conclusion: ${check.conclusion}`);
+                }
+              } else {
+                console.log(`Attempt ${i + 1}: Check "${checkName}" not found yet...`);
+              }
+
+              await new Promise(r => setTimeout(r, interval));
+            }
+            throw new Error('Timed out waiting for CI check');
 
   deploy:
     name: Deploy to Production
