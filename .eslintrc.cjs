@@ -21,6 +21,9 @@ module.exports = {
         'prettier',
       ],
       plugins: ['@typescript-eslint'],
+      rules: {
+        '@typescript-eslint/no-empty-object-type': 'off',
+      },
     },
   ],
   ignorePatterns: [
