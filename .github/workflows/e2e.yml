@@ -12,11 +12,14 @@ env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
   NODE_ENV: test
+  DATABASE_URL: postgresql://postgres:postgres@postgres:5432/defi_tracker_e2e
+  REDIS_URL: redis://redis:6379
 
 jobs:
   e2e:
     name: E2E & Accessibility
     runs-on: [self-hosted, linux, x64]
+    container: node:20
     timeout-minutes: 30
 
     services:
@@ -26,8 +29,6 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: defi_tracker_e2e
-        ports:
-          - 5432
         options: >-
           --health-cmd="pg_isready -U postgres"
           --health-interval=10s
@@ -37,8 +38,6 @@ jobs:
 
       redis:
         image: redis:7-alpine
-        ports:
-          - 6379
         options: >-
           --health-cmd="redis-cli ping"
           --health-interval=10s
@@ -49,21 +48,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set service URLs
-        run: |
-          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/defi_tracker_e2e" >> $GITHUB_ENV
-          echo "REDIS_URL=redis://localhost:${{ job.services.redis.ports[6379] }}" >> $GITHUB_ENV
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          run_install: false
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
