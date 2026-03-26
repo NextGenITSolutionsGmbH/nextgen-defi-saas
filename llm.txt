@@ -1,0 +1,44 @@
+# DeFi Tracker SaaS — LLM Context
+
+> This file provides context for LLMs working with this codebase.
+
+## Project
+DeFi Tracker SaaS by NextGen IT Solutions GmbH, Stuttgart, Germany.
+On-chain tax intelligence for Flare Network DeFi users.
+BMF-2025-compliant automated CoinTracking CSV export.
+
+## Purpose
+Automatically index, classify, and export DeFi transactions from Flare Network protocols for German tax compliance (§ 22/§ 23 EStG, BMF 2025, DAC8).
+
+## Target Users
+- DeFi retail investors (B2C) — Germany
+- Tax advisors / accountants (B2B)
+- Institutional investors / family offices
+
+## Supported Protocols (MVP Phase 1)
+- SparkDEX V3/V4 (AMM, Perps, LP)
+- Enosys DEX + CDP
+- Kinetic Market (Lending/Borrowing)
+- FLR Staking & FlareDrops
+- FTSO Price Oracle (EUR valuation)
+
+## Tech Stack
+- Frontend: Next.js / React / TypeScript
+- Backend: Node.js / TypeScript
+- Database: PostgreSQL
+- Hosting: Hetzner via Coolify
+- CI/CD: GitHub Actions (4 self-hosted runners)
+- Domain: app.defi.nextgenitsolutions.de
+
+## Key Concepts
+- CoinTracking CSV: 15-column export format for tax software
+- FTSO: Flare Time Series Oracle — on-chain EUR price feeds
+- GoBD: German audit trail requirements for tax records
+- BMF 2025: German Federal Ministry of Finance crypto tax guidelines
+- DAC8: EU directive for automatic crypto data reporting (2026)
+
+## Repository Structure
+- `/` — Project root, documentation, configuration
+- `CLAUDE.md` — AI assistant instructions
+- `README.md` — Project overview
+- `.env.example` — Environment variable template
