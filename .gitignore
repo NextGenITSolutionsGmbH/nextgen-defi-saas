@@ -42,6 +42,9 @@ logs/
 # Coolify
 .coolify-token
 
+# Turborepo
+.turbo/
+
 # Claude Code
 .claude/.credentials.json
 .claude/settings.local.json

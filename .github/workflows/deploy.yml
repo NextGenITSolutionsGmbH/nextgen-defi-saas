@@ -59,6 +59,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          file: docker/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -87,7 +88,7 @@ jobs:
 
       - name: Health check
         run: |
-          APP_URL="${{ secrets.COOLIFY_API_URL }}"
+          APP_URL="${{ secrets.APP_URL }}"
           MAX_RETRIES=20
           RETRY_INTERVAL=15
           ATTEMPT=0
