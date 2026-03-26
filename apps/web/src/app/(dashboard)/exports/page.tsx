@@ -449,7 +449,7 @@ export default function ExportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border-subtle)]">
-                {exportsQuery.data.map((exp) => (
+                {exportsQuery.data.map((exp: { id: string; format: string; status: string; generatedAt: string | Date; taxYear: number; method: string; rowCount: number | null; filePath: string | null; fileHash: string | null }) => (
                   <tr
                     key={exp.id}
                     className="transition hover:bg-[var(--color-bg-secondary)]"
@@ -513,8 +513,8 @@ export default function ExportsPage() {
                   </summary>
                   <div className="mt-2 space-y-1 font-mono">
                     {exportsQuery.data
-                      .filter((e) => e.status === "COMPLETED" && e.fileHash)
-                      .map((e) => (
+                      .filter((e: { status: string; fileHash: string | null }) => e.status === "COMPLETED" && e.fileHash)
+                      .map((e: { id: string; taxYear: number; format: string; fileHash: string | null }) => (
                         <div key={e.id}>
                           <span className="text-[var(--color-text-secondary)]">
                             {e.taxYear} {e.format}:
