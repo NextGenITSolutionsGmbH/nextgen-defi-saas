@@ -104,7 +104,7 @@ jobs:
       - name: Trigger Coolify deployment
         run: |
           HTTP_STATUS=$(curl -s -o /tmp/coolify-response.json -w "%{http_code}" \
-            -X POST "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_APP_UUID }}/restart" \
+            -X POST "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_APP_UUID }}/deploy?force=true" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
             -H "Content-Type: application/json")
 

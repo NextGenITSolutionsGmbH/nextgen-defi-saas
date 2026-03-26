@@ -75,6 +75,12 @@
     --shadow-dropdown: 0 10px 30px rgba(0, 0, 0, 0.4);
   }
 
+  /* Reset link defaults — ensures Tailwind utilities override browser UA */
+  a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
   /* Base styles */
   *,
   *::before,

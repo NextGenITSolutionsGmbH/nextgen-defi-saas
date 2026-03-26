@@ -36,7 +36,9 @@ export default defineConfig({
   globalSetup: "./global-setup.ts",
 
   webServer: {
-    command: "pnpm --filter @defi-tracker/web dev",
+    command: isCI
+      ? "pnpm --filter @defi-tracker/web start"
+      : "pnpm --filter @defi-tracker/web dev",
     url: "http://localhost:3000/api/health",
     reuseExistingServer: !isCI,
     timeout: 120_000,
