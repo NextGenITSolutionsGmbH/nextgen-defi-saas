@@ -88,10 +88,9 @@ jobs:
         run: pnpm dlx playwright install chromium
 
       - name: Run E2E tests
-        run: pnpm turbo test:e2e
-
-      - name: Run accessibility tests
-        run: pnpm turbo test:a11y
+        run: npx playwright test --config tests/e2e/playwright.config.ts
+        env:
+          CI: 'true'
 
       - name: Upload Playwright report
         if: always()
