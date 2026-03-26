@@ -10,6 +10,9 @@ COPY . .
 # Install ALL dependencies (dev + prod) — needed for turbo, typescript, etc.
 RUN NODE_ENV=development pnpm install --frozen-lockfile
 
+# Generate Prisma client
+RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
+
 # Build the web app
 RUN pnpm turbo build --filter=@defi-tracker/web
 
