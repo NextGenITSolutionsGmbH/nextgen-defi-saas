@@ -72,7 +72,7 @@ jobs:
         run: pnpm --filter @defi-tracker/db prisma db seed
 
       - name: Build web application
-        run: pnpm turbo build --filter=web
+        run: pnpm turbo build --filter=@defi-tracker/web
 
       - name: Install Playwright browsers
         run: pnpm dlx playwright install chromium --with-deps

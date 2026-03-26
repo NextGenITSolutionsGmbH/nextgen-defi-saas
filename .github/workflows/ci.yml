@@ -16,6 +16,7 @@ env:
   TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
   DATABASE_URL: postgresql://postgres:postgres@localhost:5433/defi_tracker_test
   REDIS_URL: redis://localhost:6380
+  ESLINT_USE_FLAT_CONFIG: 'false'
 
 jobs:
   lint-and-test:
