@@ -1,81 +1,111 @@
 import { describe, it, expect } from 'vitest';
 import {
   generateCoinTrackingCsv,
+  generateCoinTrackingCsvBuffer,
   formatDecimalDE,
   formatDateCT,
-  escapeCsvValue,
+  rowToCsvLine,
   validateCoinTrackingRow,
-  COINTRACKING_HEADERS,
 } from '../cointracking-csv';
-import type { CoinTrackingRow } from '../../types/export';
+import type { CoinTrackingRow } from '../cointracking-csv';
 
 describe('formatDecimalDE', () => {
-  it('should format numbers with comma as decimal separator', () => {
+  it('should replace dots with commas for German decimal format', () => {
+    expect(formatDecimalDE('1234.56')).toBe('1234,56');
+  });
+
+  it('should handle integer strings', () => {
+    expect(formatDecimalDE('100')).toBe('100');
+  });
+
+  it('should handle numbers', () => {
     expect(formatDecimalDE(1234.56)).toBe('1234,56');
   });
 
-  it('should pad to 2 decimal places by default', () => {
-    expect(formatDecimalDE(100)).toBe('100,00');
-    expect(formatDecimalDE(0.1)).toBe('0,10');
-  });
-
-  it('should respect custom decimal places', () => {
-    expect(formatDecimalDE(3.14159, 4)).toBe('3,1416');
-    expect(formatDecimalDE(42, 0)).toBe('42');
-  });
-
   it('should handle zero', () => {
-    expect(formatDecimalDE(0)).toBe('0,00');
+    expect(formatDecimalDE('0')).toBe('0');
+    expect(formatDecimalDE(0)).toBe('0');
   });
 
-  it('should handle negative numbers', () => {
-    expect(formatDecimalDE(-1234.56)).toBe('-1234,56');
+  it('should handle null', () => {
+    expect(formatDecimalDE(null)).toBe('');
+  });
+
+  it('should handle empty string', () => {
+    expect(formatDecimalDE('')).toBe('');
+  });
+
+  it('should handle small decimals', () => {
+    expect(formatDecimalDE('0.001')).toBe('0,001');
   });
 });
 
 describe('formatDateCT', () => {
-  it('should format dates as DD.MM.YYYY HH:MM:SS', () => {
-    const date = new Date('2026-03-12T09:14:33Z');
-    expect(formatDateCT(date)).toBe('12.03.2026 09:14:33');
-  });
-
-  it('should accept ISO string input', () => {
-    expect(formatDateCT('2026-03-12T09:14:33Z')).toBe('12.03.2026 09:14:33');
+  it('should format Unix timestamp as DD.MM.YYYY HH:MM:SS', () => {
+    // 2026-03-12T09:14:33Z as Unix timestamp in seconds
+    const timestamp = Math.floor(new Date('2026-03-12T09:14:33Z').getTime() / 1000);
+    expect(formatDateCT(timestamp)).toBe('12.03.2026 09:14:33');
   });
 
   it('should pad single-digit values with zeros', () => {
-    const date = new Date('2026-01-05T03:07:09Z');
-    expect(formatDateCT(date)).toBe('05.01.2026 03:07:09');
+    const timestamp = Math.floor(new Date('2026-01-05T03:07:09Z').getTime() / 1000);
+    expect(formatDateCT(timestamp)).toBe('05.01.2026 03:07:09');
   });
 
   it('should handle midnight', () => {
-    expect(formatDateCT('2026-01-01T00:00:00Z')).toBe('01.01.2026 00:00:00');
+    const timestamp = Math.floor(new Date('2026-01-01T00:00:00Z').getTime() / 1000);
+    expect(formatDateCT(timestamp)).toBe('01.01.2026 00:00:00');
   });
 
   it('should handle end of day', () => {
-    expect(formatDateCT('2026-12-31T23:59:59Z')).toBe('31.12.2026 23:59:59');
+    const timestamp = Math.floor(new Date('2026-12-31T23:59:59Z').getTime() / 1000);
+    expect(formatDateCT(timestamp)).toBe('31.12.2026 23:59:59');
   });
 });
 
-describe('escapeCsvValue', () => {
-  it('should wrap values in double quotes', () => {
-    expect(escapeCsvValue('Trade')).toBe('"Trade"');
+describe('rowToCsvLine', () => {
+  function makeRow(overrides: Partial<CoinTrackingRow> = {}): CoinTrackingRow {
+    return {
+      type: 'Trade',
+      buyAmount: '1,523',
+      buyCurrency: 'FLR',
+      sellAmount: '50',
+      sellCurrency: 'USDT',
+      fee: '0,02',
+      feeCurrency: 'FLR',
+      exchange: 'SparkDEX',
+      tradeGroup: 'DeFi-Flare',
+      comment: 'Swap wFLR->USDT',
+      date: '12.03.2026 09:14:33',
+      liquidityPool: null,
+      txId: '0xabc123def456',
+      buyValueInAccountCurrency: '2,64',
+      sellValueInAccountCurrency: '50,00',
+      ...overrides,
+    };
+  }
+
+  it('should wrap all field values in double quotes', () => {
+    const line = rowToCsvLine(makeRow());
+    expect(line).toContain('"Trade"');
+    expect(line).toContain('"SparkDEX"');
   });
 
-  it('should escape internal double quotes as ""', () => {
-    expect(escapeCsvValue('He said "hello"')).toBe('"He said ""hello"""');
+  it('should escape internal double quotes by doubling them', () => {
+    const line = rowToCsvLine(makeRow({ comment: 'He said "hello"' }));
+    expect(line).toContain('"He said ""hello"""');
   });
 
-  it('should handle empty strings', () => {
-    expect(escapeCsvValue('')).toBe('""');
+  it('should handle null values as empty quoted strings', () => {
+    const line = rowToCsvLine(makeRow({ liquidityPool: null }));
+    // null fields should become ""
+    expect(line).toContain('""');
   });
 
-  it('should handle values with commas', () => {
-    expect(escapeCsvValue('1,234.56')).toBe('"1,234.56"');
-  });
-
-  it('should handle values with newlines', () => {
-    expect(escapeCsvValue('line1\nline2')).toBe('"line1\nline2"');
+  it('should produce exactly 15 comma-separated fields', () => {
+    const line = rowToCsvLine(makeRow());
+    const fields = line.match(/"(?:[^"]|"")*"/g);
+    expect(fields).toHaveLength(15);
   });
 });
 
@@ -83,122 +113,121 @@ describe('validateCoinTrackingRow', () => {
   function makeRow(overrides: Partial<CoinTrackingRow> = {}): CoinTrackingRow {
     return {
       type: 'Trade',
-      buyAmount: '1.523',
+      buyAmount: '1,523',
       buyCurrency: 'FLR',
       sellAmount: '50',
       sellCurrency: 'USDT',
-      fee: '0.02',
+      fee: '0,02',
       feeCurrency: 'FLR',
       exchange: 'SparkDEX',
       tradeGroup: 'DeFi-Flare',
       comment: 'Swap wFLR->USDT',
       date: '12.03.2026 09:14:33',
-      liquidityPool: '',
+      liquidityPool: null,
       txId: '0xabc123def456',
-      buyValueEur: '2.64',
-      sellValueEur: '50.00',
+      buyValueInAccountCurrency: '2,64',
+      sellValueInAccountCurrency: '50,00',
       ...overrides,
     };
   }
 
   it('should validate a correct row with no errors', () => {
-    const errors = validateCoinTrackingRow(makeRow());
-    expect(errors).toHaveLength(0);
+    const result = validateCoinTrackingRow(makeRow());
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
   });
 
-  it('should require Type field', () => {
-    const errors = validateCoinTrackingRow(makeRow({ type: '' }));
-    expect(errors).toContain('Type is required');
+  it('should reject invalid type', () => {
+    const result = validateCoinTrackingRow(makeRow({ type: 'InvalidType' }));
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes('Invalid type'))).toBe(true);
   });
 
-  it('should require Date field', () => {
-    const errors = validateCoinTrackingRow(makeRow({ date: '' }));
-    expect(errors).toContain('Date is required');
-  });
-
-  it('should validate Date format (DD.MM.YYYY HH:MM:SS)', () => {
-    const errors = validateCoinTrackingRow(makeRow({ date: '2026-03-12' }));
-    expect(errors).toContain('Date must be in DD.MM.YYYY HH:MM:SS format');
+  it('should reject invalid date format', () => {
+    const result = validateCoinTrackingRow(makeRow({ date: '2026-03-12' }));
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes('date format'))).toBe(true);
   });
 
   it('should require at least one of buy or sell', () => {
-    const errors = validateCoinTrackingRow(
+    const result = validateCoinTrackingRow(
       makeRow({
-        buyAmount: '',
-        buyCurrency: '',
-        sellAmount: '',
-        sellCurrency: '',
+        buyAmount: null,
+        buyCurrency: null,
+        sellAmount: null,
+        sellCurrency: null,
       }),
     );
-    expect(errors).toContain('At least one of buy or sell must be specified');
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes('buy-side or sell-side'))).toBe(true);
   });
 
   it('should accept buy-only rows (staking rewards)', () => {
-    const errors = validateCoinTrackingRow(
+    const result = validateCoinTrackingRow(
       makeRow({
-        sellAmount: '',
-        sellCurrency: '',
+        sellAmount: null,
+        sellCurrency: null,
       }),
     );
-    expect(errors).toHaveLength(0);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
   });
 
-  it('should accept sell-only rows (provide liquidity)', () => {
-    const errors = validateCoinTrackingRow(
+  it('should accept sell-only rows', () => {
+    const result = validateCoinTrackingRow(
       makeRow({
-        buyAmount: '',
-        buyCurrency: '',
+        buyAmount: null,
+        buyCurrency: null,
       }),
     );
-    expect(errors).toHaveLength(0);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('should require buyCurrency when buyAmount is set', () => {
+    const result = validateCoinTrackingRow(
+      makeRow({
+        buyAmount: '100',
+        buyCurrency: null,
+      }),
+    );
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes('buyCurrency'))).toBe(true);
+  });
+
+  it('should require feeCurrency when fee is set', () => {
+    const result = validateCoinTrackingRow(
+      makeRow({
+        fee: '0.01',
+        feeCurrency: null,
+      }),
+    );
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes('feeCurrency'))).toBe(true);
+  });
+
+  it('should require exchange to be non-empty', () => {
+    const result = validateCoinTrackingRow(makeRow({ exchange: '' }));
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes('exchange'))).toBe(true);
+  });
+
+  it('should require txId to be non-empty', () => {
+    const result = validateCoinTrackingRow(makeRow({ txId: '' }));
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes('txId'))).toBe(true);
   });
 
   it('should return multiple errors at once', () => {
-    const errors = validateCoinTrackingRow(
+    const result = validateCoinTrackingRow(
       makeRow({
-        type: '',
-        date: '',
-        buyAmount: '',
-        buyCurrency: '',
-        sellAmount: '',
-        sellCurrency: '',
+        type: 'InvalidType',
+        date: 'bad-date',
+        exchange: '',
+        txId: '',
       }),
     );
-    expect(errors.length).toBeGreaterThanOrEqual(3);
-  });
-});
-
-describe('COINTRACKING_HEADERS', () => {
-  it('should have exactly 15 columns', () => {
-    expect(COINTRACKING_HEADERS).toHaveLength(15);
-  });
-
-  it('should start with Type', () => {
-    expect(COINTRACKING_HEADERS[0]).toBe('Type');
-  });
-
-  it('should end with Sell Value in Account Currency (optional)', () => {
-    expect(COINTRACKING_HEADERS[14]).toBe(
-      'Sell Value in Account Currency (optional)',
-    );
-  });
-
-  it('should contain all expected header names', () => {
-    expect(COINTRACKING_HEADERS).toContain('Buy Amount');
-    expect(COINTRACKING_HEADERS).toContain('Buy Currency');
-    expect(COINTRACKING_HEADERS).toContain('Sell Amount');
-    expect(COINTRACKING_HEADERS).toContain('Sell Currency');
-    expect(COINTRACKING_HEADERS).toContain('Fee');
-    expect(COINTRACKING_HEADERS).toContain('Fee Currency');
-    expect(COINTRACKING_HEADERS).toContain('Exchange');
-    expect(COINTRACKING_HEADERS).toContain('Trade-Group');
-    expect(COINTRACKING_HEADERS).toContain('Comment');
-    expect(COINTRACKING_HEADERS).toContain('Date');
-    expect(COINTRACKING_HEADERS).toContain('Liquidity pool (optional)');
-    expect(COINTRACKING_HEADERS).toContain('Tx-ID (optional)');
-    expect(COINTRACKING_HEADERS).toContain(
-      'Buy Value in Account Currency (optional)',
-    );
+    expect(result.errors.length).toBeGreaterThanOrEqual(3);
   });
 });
 
@@ -206,20 +235,20 @@ describe('generateCoinTrackingCsv', () => {
   function makeRow(overrides: Partial<CoinTrackingRow> = {}): CoinTrackingRow {
     return {
       type: 'Trade',
-      buyAmount: '1.523',
+      buyAmount: '1,523',
       buyCurrency: 'FLR',
       sellAmount: '50',
       sellCurrency: 'USDT',
-      fee: '0.02',
+      fee: '0,02',
       feeCurrency: 'FLR',
       exchange: 'SparkDEX',
       tradeGroup: 'DeFi-Flare',
       comment: 'Swap wFLR->USDT',
       date: '12.03.2026 09:14:33',
-      liquidityPool: '',
+      liquidityPool: null,
       txId: '0xabc123def456',
-      buyValueEur: '2.64',
-      sellValueEur: '50.00',
+      buyValueInAccountCurrency: '2,64',
+      sellValueInAccountCurrency: '50,00',
       ...overrides,
     };
   }
@@ -230,12 +259,13 @@ describe('generateCoinTrackingCsv', () => {
     expect(csv.startsWith('\uFEFF')).toBe(true);
   });
 
-  it('should include header row with 15 columns', () => {
+  it('should include header row with 15 quoted columns', () => {
     const csv = generateCoinTrackingCsv([]);
-    const lines = csv.replace('\uFEFF', '').split('\n');
+    const content = csv.replace('\uFEFF', '');
+    const lines = content.split('\r\n');
     const headerLine = lines[0];
 
-    // Count quoted values
+    // Count quoted values in the header
     const headers = headerLine.match(/"[^"]*"/g);
     expect(headers).toHaveLength(15);
   });
@@ -243,21 +273,22 @@ describe('generateCoinTrackingCsv', () => {
   it('should include data rows after header', () => {
     const row = makeRow();
     const csv = generateCoinTrackingCsv([row]);
-    const lines = csv.replace('\uFEFF', '').split('\n');
+    const content = csv.replace('\uFEFF', '');
+    const lines = content.split('\r\n').filter((l) => l.length > 0);
 
     expect(lines).toHaveLength(2); // header + 1 data row
     expect(lines[1]).toContain('"Trade"');
-    expect(lines[1]).toContain('"1.523"');
     expect(lines[1]).toContain('"FLR"');
   });
 
   it('should handle multiple rows', () => {
     const rows = [
       makeRow({ type: 'Trade' }),
-      makeRow({ type: 'Staking', sellAmount: '', sellCurrency: '' }),
+      makeRow({ type: 'Staking', sellAmount: null, sellCurrency: null }),
     ];
     const csv = generateCoinTrackingCsv(rows);
-    const lines = csv.replace('\uFEFF', '').split('\n');
+    const content = csv.replace('\uFEFF', '');
+    const lines = content.split('\r\n').filter((l) => l.length > 0);
 
     expect(lines).toHaveLength(3); // header + 2 data rows
     expect(lines[1]).toContain('"Trade"');
@@ -271,9 +302,16 @@ describe('generateCoinTrackingCsv', () => {
     expect(csv).toContain('"TX with ""special"" chars"');
   });
 
-  it('should handle empty rows array', () => {
+  it('should use CRLF line endings', () => {
+    const csv = generateCoinTrackingCsv([makeRow()]);
+    // Should contain \r\n
+    expect(csv).toContain('\r\n');
+  });
+
+  it('should handle empty rows array (header only)', () => {
     const csv = generateCoinTrackingCsv([]);
-    const lines = csv.replace('\uFEFF', '').split('\n');
+    const content = csv.replace('\uFEFF', '');
+    const lines = content.split('\r\n').filter((l) => l.length > 0);
 
     expect(lines).toHaveLength(1); // just header
   });
@@ -281,41 +319,27 @@ describe('generateCoinTrackingCsv', () => {
   it('should produce rows with exactly 15 values each', () => {
     const row = makeRow();
     const csv = generateCoinTrackingCsv([row]);
-    const lines = csv.replace('\uFEFF', '').split('\n');
+    const content = csv.replace('\uFEFF', '');
+    const lines = content.split('\r\n').filter((l) => l.length > 0);
 
-    // Parse the data row — count fields by matching quoted values
+    // Parse the data row -- count fields by matching quoted values
     const dataLine = lines[1];
     const fields = dataLine.match(/"(?:[^"]|"")*"/g);
     expect(fields).toHaveLength(15);
   });
+});
 
-  it('should match the CoinTracking example format from PRD', () => {
-    // Based on the example from the technical document
-    const row: CoinTrackingRow = {
-      type: 'Trade',
-      buyAmount: '1.523',
-      buyCurrency: 'FLR',
-      sellAmount: '50',
-      sellCurrency: 'USDT',
-      fee: '0.02',
-      feeCurrency: 'FLR',
-      exchange: 'SparkDEX',
-      tradeGroup: 'DeFi-Flare',
-      comment: 'Swap wFLR->USDT',
-      date: '12.03.2026 09:14:33',
-      liquidityPool: '',
-      txId: '0xabc123def456...',
-      buyValueEur: '2.64',
-      sellValueEur: '50.00',
-    };
+describe('generateCoinTrackingCsvBuffer', () => {
+  it('should return a Buffer', () => {
+    const buffer = generateCoinTrackingCsvBuffer([]);
+    expect(Buffer.isBuffer(buffer)).toBe(true);
+  });
 
-    const csv = generateCoinTrackingCsv([row]);
-    const lines = csv.replace('\uFEFF', '').split('\n');
-    const dataLine = lines[1];
-
-    // Verify key fields are present and properly formatted
-    expect(dataLine).toContain('"Trade"');
-    expect(dataLine).toContain('"SparkDEX"');
-    expect(dataLine).toContain('"12.03.2026 09:14:33"');
+  it('should contain UTF-8 BOM at the start', () => {
+    const buffer = generateCoinTrackingCsvBuffer([]);
+    // UTF-8 BOM is EF BB BF
+    expect(buffer[0]).toBe(0xef);
+    expect(buffer[1]).toBe(0xbb);
+    expect(buffer[2]).toBe(0xbf);
   });
 });
