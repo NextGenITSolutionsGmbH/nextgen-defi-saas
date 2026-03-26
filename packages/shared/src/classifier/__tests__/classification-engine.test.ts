@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ClassificationEngine } from '../classification-engine';
-import type { DecodedEvent, ClassificationResult, AmpelStatus } from '../types';
+import type { DecodedEvent, AmpelStatus } from '../types';
 
 describe('ClassificationEngine', () => {
   const engine = new ClassificationEngine();

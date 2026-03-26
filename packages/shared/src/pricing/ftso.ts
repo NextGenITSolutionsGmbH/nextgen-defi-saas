@@ -16,12 +16,6 @@ import type { PriceResult } from '../types';
 const FTSO_REGISTRY_ADDRESS = '0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019';
 
 /**
- * Function selector for `getCurrentPriceWithDecimals(string)`
- * Keccak-256 of "getCurrentPriceWithDecimals(string)" → first 4 bytes
- */
-const GET_CURRENT_PRICE_WITH_DECIMALS_SELECTOR = '0xa69afdc6';
-
-/**
  * Function selector for `getCurrentPriceWithDecimalsAndTimestamp(string)`
  * Keccak-256 of "getCurrentPriceWithDecimalsAndTimestamp(string)" → first 4 bytes
  */

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { LotMatcher } from '../lot-matcher';
-import type { TaxLot, Disposal, TaxMethod } from '../types';
+import type { TaxLot, Disposal } from '../types';
 
 describe('LotMatcher', () => {
   function makeLot(overrides: Partial<TaxLot> & { id: string }): TaxLot {
