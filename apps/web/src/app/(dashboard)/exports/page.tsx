@@ -314,7 +314,7 @@ export default function ExportsPage() {
               </label>
               {!selectAll && (
                 <div className="ml-4 space-y-2 border-l-2 border-[var(--color-border-default)] pl-4">
-                  {wallets.map((w: { id: string; address: string; label: string | null }) => (
+                  {wallets.map((w: { id: string; address: string; label: string | null; _count?: { transactions: number } }) => (
                     <label
                       key={w.id}
                       className="flex cursor-pointer items-center gap-2"
@@ -329,7 +329,7 @@ export default function ExportsPage() {
                         {w.label || `${w.address.slice(0, 6)}...${w.address.slice(-4)}`}
                       </span>
                       <span className="text-xs text-[var(--color-text-tertiary)]">
-                        ({w._count.transactions} Tx)
+                        ({w._count?.transactions ?? 0} Tx)
                       </span>
                     </label>
                   ))}
