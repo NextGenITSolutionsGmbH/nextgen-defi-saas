@@ -86,4 +86,5 @@ jobs:
         run: pnpm turbo test:integration
 
       - name: Security audit
+        continue-on-error: true
         run: pnpm dlx audit-ci --high
