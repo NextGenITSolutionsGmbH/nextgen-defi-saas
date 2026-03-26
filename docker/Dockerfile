@@ -8,7 +8,10 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/ ./packages/
 
+# Force NODE_ENV=development during install so devDependencies (turbo, typescript) are included
+ENV NODE_ENV=development
 RUN pnpm install --frozen-lockfile
+ENV NODE_ENV=production
 
 # ── Stage 2: Build the application ───────────────────────────────────────────
 FROM node:20-alpine AS builder
@@ -20,7 +23,7 @@ COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages/ ./packages/
 COPY . .
 
-RUN pnpm turbo build --filter=web
+RUN pnpm turbo build --filter=@defi-tracker/web
 
 # ── Stage 3: Production runner ───────────────────────────────────────────────
 FROM node:20-alpine AS runner
