@@ -17,6 +17,14 @@
     "./constants": {
       "types": "./src/constants/index.ts",
       "default": "./src/constants/index.ts"
+    },
+    "./abis": {
+      "types": "./src/abis/index.ts",
+      "default": "./src/abis/index.ts"
+    },
+    "./queue": {
+      "types": "./src/queue/index.ts",
+      "default": "./src/queue/index.ts"
     }
   },
   "scripts": {
@@ -27,5 +35,8 @@
   },
   "devDependencies": {
     "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "ioredis": "^5.10.1"
   }
 }
