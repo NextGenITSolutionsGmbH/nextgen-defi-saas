@@ -66,13 +66,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
-        run: pnpm --filter @defi-tracker/db prisma generate
+        run: pnpm --filter @defi-tracker/db exec prisma generate
 
       - name: Run database migrations
-        run: pnpm --filter @defi-tracker/db prisma migrate deploy
+        run: pnpm --filter @defi-tracker/db exec prisma migrate deploy
 
       - name: Seed database
-        run: pnpm --filter @defi-tracker/db prisma db seed
+        run: pnpm --filter @defi-tracker/db exec prisma db seed
 
       - name: Build web application
         run: pnpm turbo build --filter=@defi-tracker/web
