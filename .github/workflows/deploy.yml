@@ -103,10 +103,10 @@ jobs:
 
       - name: Trigger Coolify deployment
         run: |
+          # Use Coolify deploy webhook to trigger a full rebuild (not just restart)
           HTTP_STATUS=$(curl -s -o /tmp/coolify-response.json -w "%{http_code}" \
-            -X POST "${{ secrets.COOLIFY_API_URL }}/api/v1/applications/${{ secrets.COOLIFY_APP_UUID }}/deploy?force=true" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}" \
-            -H "Content-Type: application/json")
+            "${{ secrets.COOLIFY_API_URL }}/api/v1/deploy?uuid=${{ secrets.COOLIFY_APP_UUID }}&force=true" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}")
 
           echo "Coolify API responded with status: ${HTTP_STATUS}"
           cat /tmp/coolify-response.json
