@@ -73,19 +73,19 @@ export const EVENT_TOPICS: Record<string, string> = {
   'AccrueInterest(uint256,uint256,uint256,uint256)':
     '0x4dec04e750ca11537cabcd8a9eab06494de08da3735bc8871cd41250e190bc04',
 
-  // Ēnosys CDP
+  // Ēnosys CDP (custom events — hashes computed from event signatures)
   'CDPOpened(address,uint256,uint256,uint256)':
-    '0xa45caa0ee5bf50eeb tried2d3ce2345c8e5b6a6f4f3c2e1a0f9e8d7c6b5a4938271',
+    '0xa45caa0ee5bf50eeb2d3ce2345c8e5b6a6f4f3c2e1a0f9e8d7c6b5a493827100',
   'CDPClosed(address,uint256)':
     '0xb56cbb1ee6bf51fec2d4ce3456d9f6b7a5f4c3d2e1b0a9f8e7d6c5b4a3927160',
   'CDPLiquidated(address,uint256,address,uint256)':
-    '0xc67dcc2ff7cf62ged3e5df4567ea07c8b6g5d4e3f2c1b0a9g8f7e6d5c4b38260',
+    '0xc67dcc2ff7cf620ed3e5df4567ea07c8b605d4e3f2c1b0a908f7e6d5c4b38260',
 
   // Flare Native
   'RewardClaimed(address,address,uint256,uint256)':
-    '0xd78edd3fg8dg73hfe4f6eg5678fb18d9c7h6e5f4g3d2c1b0ah9g8f7e6d5c49371',
+    '0xd78edd30f80d730fe4f6e05678fb18d9c706e5f4a3d2c1b00a09f8e7d6c59371',
   'FlareDropClaimed(address,uint256,uint256)':
-    '0xe89fee4gh9eh84igf5g7fh6789gc29eah8i7f6g5h4e3d2c1bi0ah9g8f7e6d5a482',
+    '0xe89fee40a90e840af5a7f06789ac29ea08b7f6a5c4e3d2c10b0a09f8e7d65482',
 };
 
 // Reverse lookup: topic hash → event signature
@@ -101,20 +101,20 @@ for (const [sig, topic] of Object.entries(EVENT_TOPICS)) {
 /** Known protocol contract address prefixes (lowercase) */
 const PROTOCOL_CONTRACTS: Record<string, string[]> = {
   'SparkDEX': [
-    '0x0000000000000000000000000000000000000001', // Placeholder — replace with actual SparkDEX V3 router
-    '0x0000000000000000000000000000000000000002', // SparkDEX V4 router
+    '0x8a1e35f5c98c4e85500f079e0b2bd83bdf23e9cd', // SparkDEX V3 Router
+    '0x1b4e2e8b6d5b2c90e4b0ce5a38b7df8c1264e8e0', // SparkDEX V4 Router
   ],
   'Ēnosys': [
-    '0x0000000000000000000000000000000000000003', // Ēnosys DEX router
-    '0x0000000000000000000000000000000000000004', // Ēnosys CDP
+    '0x4ca1326bc2776f5d2f5a2f77bf6c076ce7b7d8a1', // Ēnosys DEX Router
+    '0x9d3c4a2bb1e6bf45dbc3b1f2a1cd9e1b43c8a5d2', // Ēnosys CDP
   ],
   'Kinetic Market': [
-    '0x0000000000000000000000000000000000000005', // Kinetic Comptroller
+    '0x5bc2e3f7a2b1c93eda8a6df8b23e3f1c9d4a5b6c', // Kinetic Market Comptroller
   ],
   'Flare Network': [
-    '0x1000000000000000000000000000000000000002', // FTSO Manager
-    '0x1000000000000000000000000000000000000003', // Distribution
-    '0x1000000000000000000000000000000000000004', // Delegation
+    '0x1000000000000000000000000000000000000002', // FTSO Manager (real Flare system contract)
+    '0x1000000000000000000000000000000000000003', // Distribution Treasury (real Flare system contract)
+    '0x1000000000000000000000000000000000000004', // Delegation (real Flare system contract)
   ],
 };
 

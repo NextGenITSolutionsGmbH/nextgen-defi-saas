@@ -7,6 +7,14 @@ import {
   PRICE_FETCH_QUEUE,
   type PriceFetchJobData,
 } from "@defi-tracker/shared/queue";
+import {
+  getFtsoPrice,
+  isFtsoSupported,
+  getCoinGeckoPrice,
+  isCoinGeckoSupported,
+  getCmcPrice,
+  isCmcSupported,
+} from "@defi-tracker/shared";
 import { prisma } from "@defi-tracker/db";
 import type { PriceSource } from "@defi-tracker/db";
 
@@ -125,39 +133,83 @@ async function processPriceFetch(job: Job<PriceFetchJobData>): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Price source stubs (to be replaced with real API integrations)
+// Price source implementations (4-tier waterfall: FTSO → CoinGecko → CMC → Manual)
 // ---------------------------------------------------------------------------
 
 async function fetchFromFTSO(
   tokenSymbol: string,
-  chainId: number,
+  _chainId: number,
   timestampUnix: number,
 ): Promise<PriceLookupResult> {
-  // TODO: Implement actual FTSO price oracle integration
-  // The Flare Time Series Oracle provides on-chain price feeds
-  // for native Flare ecosystem tokens.
-  void tokenSymbol; void chainId; void timestampUnix;
-  throw new Error("FTSO integration not yet implemented");
+  if (!isFtsoSupported(tokenSymbol)) {
+    throw new Error(`Token ${tokenSymbol} is not supported by FTSO`);
+  }
+
+  const rpcUrl = process.env.FLARE_RPC_URL ?? 'https://flare-api.flare.network/ext/C/rpc';
+  const result = await getFtsoPrice(
+    tokenSymbol,
+    timestampUnix,
+    rpcUrl,
+  );
+
+  if (!result) {
+    throw new Error(`FTSO returned no price for ${tokenSymbol}`);
+  }
+
+  return {
+    eurPrice: result.eurPrice,
+    source: "FTSO",
+    sourceUrl: "ftso://flare-mainnet",
+    fallbackReason: null,
+  };
 }
 
 async function fetchFromCoinGecko(
   tokenSymbol: string,
   timestampUnix: number,
 ): Promise<PriceLookupResult> {
-  // TODO: Implement CoinGecko API integration
-  // GET https://api.coingecko.com/api/v3/coins/{id}/history?date={dd-mm-yyyy}
-  void tokenSymbol; void timestampUnix;
-  throw new Error("CoinGecko integration not yet implemented");
+  if (!isCoinGeckoSupported(tokenSymbol)) {
+    throw new Error(`Token ${tokenSymbol} is not supported by CoinGecko`);
+  }
+
+  const result = await getCoinGeckoPrice(tokenSymbol, timestampUnix);
+
+  if (!result) {
+    throw new Error(`CoinGecko returned no price for ${tokenSymbol}`);
+  }
+
+  return {
+    eurPrice: result.eurPrice,
+    source: "COINGECKO",
+    sourceUrl: "https://api.coingecko.com",
+    fallbackReason: null,
+  };
 }
 
 async function fetchFromCMC(
   tokenSymbol: string,
   timestampUnix: number,
 ): Promise<PriceLookupResult> {
-  // TODO: Implement CoinMarketCap API integration
-  // GET https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/historical
-  void tokenSymbol; void timestampUnix;
-  throw new Error("CMC integration not yet implemented");
+  if (!isCmcSupported(tokenSymbol)) {
+    throw new Error(`Token ${tokenSymbol} is not supported by CoinMarketCap`);
+  }
+
+  if (!process.env.CMC_API_KEY) {
+    throw new Error("CMC_API_KEY environment variable is not set");
+  }
+
+  const result = await getCmcPrice(tokenSymbol, timestampUnix, process.env.CMC_API_KEY);
+
+  if (!result) {
+    throw new Error(`CMC returned no price for ${tokenSymbol}`);
+  }
+
+  return {
+    eurPrice: result.eurPrice,
+    source: "CMC",
+    sourceUrl: "https://pro-api.coinmarketcap.com",
+    fallbackReason: null,
+  };
 }
 
 // ---------------------------------------------------------------------------

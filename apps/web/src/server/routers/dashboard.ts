@@ -168,36 +168,128 @@ export const dashboardRouter = router({
 
   /**
    * Monthly activity — tx count per month for the last 12 months
+   * Optimized: single query instead of N+1
    */
   monthlyActivity: protectedProcedure.query(async ({ ctx }) => {
     const now = new Date();
-    const months: { month: string; txCount: number }[] = [];
+    const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    const startTimestamp = Math.floor(twelveMonthsAgo.getTime() / 1000);
 
+    const transactions = await ctx.db.transaction.findMany({
+      where: {
+        wallet: { userId: ctx.user.id },
+        blockTimestamp: { gte: startTimestamp },
+      },
+      select: { blockTimestamp: true },
+    });
+
+    const monthCounts = new Map<string, number>();
     for (let i = 11; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const startOfMonth = Math.floor(date.getTime() / 1000);
-
-      const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
-      const endOfMonth = Math.floor(nextMonth.getTime() / 1000);
-
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const label = `${year}-${month}`;
-
-      const count = await ctx.db.transaction.count({
-        where: {
-          wallet: { userId: ctx.user.id },
-          blockTimestamp: {
-            gte: startOfMonth,
-            lt: endOfMonth,
-          },
-        },
-      });
-
-      months.push({ month: label, txCount: count });
+      const label = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      monthCounts.set(label, 0);
     }
 
-    return months;
+    for (const tx of transactions) {
+      const date = new Date(Number(tx.blockTimestamp) * 1000);
+      const label = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      if (monthCounts.has(label)) {
+        monthCounts.set(label, (monthCounts.get(label) ?? 0) + 1);
+      }
+    }
+
+    return Array.from(monthCounts.entries()).map(([month, txCount]) => ({ month, txCount }));
+  }),
+
+  /**
+   * Portfolio summary — realized gains/losses and open positions from tax engine
+   */
+  portfolioSummary: protectedProcedure.query(async ({ ctx }) => {
+    const currentYear = new Date().getFullYear();
+
+    const taxEvents = await ctx.db.taxEvent.findMany({
+      where: { userId: ctx.user.id, taxYear: currentYear },
+    });
+
+    let totalGains = 0;
+    let totalLosses = 0;
+    let taxableGains = 0;
+    let taxFreeGains = 0;
+
+    for (const event of taxEvents) {
+      const gl = Number(event.gainLossEur);
+      if (gl >= 0) {
+        totalGains += gl;
+        if (event.holdingPeriodDays !== null && event.holdingPeriodDays > 365) {
+          taxFreeGains += gl;
+        } else {
+          taxableGains += gl;
+        }
+      } else {
+        totalLosses += Math.abs(gl);
+      }
+    }
+
+    const openLots = await ctx.db.taxLot.findMany({
+      where: {
+        userId: ctx.user.id,
+        lotStatus: { in: ["OPEN", "PARTIAL"] },
+      },
+      select: { tokenSymbol: true, remainingAmount: true, acquisitionCostEur: true },
+    });
+
+    const totalCostBasis = openLots.reduce(
+      (sum, lot) => sum + Number(lot.acquisitionCostEur),
+      0,
+    );
+
+    const tokenBreakdown: Record<string, { amount: number; costBasis: number }> = {};
+    for (const lot of openLots) {
+      const sym = lot.tokenSymbol;
+      if (!tokenBreakdown[sym]) tokenBreakdown[sym] = { amount: 0, costBasis: 0 };
+      tokenBreakdown[sym].amount += Number(lot.remainingAmount);
+      tokenBreakdown[sym].costBasis += Number(lot.acquisitionCostEur);
+    }
+
+    return {
+      taxYear: currentYear,
+      realizedGains: Math.round(totalGains * 100) / 100,
+      realizedLosses: Math.round(totalLosses * 100) / 100,
+      netGainLoss: Math.round((totalGains - totalLosses) * 100) / 100,
+      taxableGains: Math.round(taxableGains * 100) / 100,
+      taxFreeGains: Math.round(taxFreeGains * 100) / 100,
+      totalCostBasis: Math.round(totalCostBasis * 100) / 100,
+      openPositions: openLots.length,
+      tokenBreakdown,
+    };
+  }),
+
+  /**
+   * Classification progress — completion by protocol
+   */
+  classificationProgress: protectedProcedure.query(async ({ ctx }) => {
+    const grouped = await ctx.db.transaction.groupBy({
+      by: ["protocol", "status"],
+      where: { wallet: { userId: ctx.user.id } },
+      _count: { id: true },
+    });
+
+    const protocols: Record<string, { total: number; green: number; yellow: number; red: number; gray: number }> = {};
+    for (const item of grouped) {
+      const proto = item.protocol ?? "Unknown";
+      if (!protocols[proto]) protocols[proto] = { total: 0, green: 0, yellow: 0, red: 0, gray: 0 };
+      protocols[proto].total += item._count.id;
+      const status = item.status.toLowerCase() as "green" | "yellow" | "red" | "gray";
+      protocols[proto][status] += item._count.id;
+    }
+
+    return Object.entries(protocols).map(([protocol, counts]) => ({
+      protocol,
+      ...counts,
+      classifiedPercentage: counts.total > 0
+        ? Math.round((counts.green / counts.total) * 10000) / 100
+        : 0,
+    }));
   }),
 
   /**

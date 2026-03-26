@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../trpc";
+import { addWalletSyncJob } from '../queue';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -179,8 +180,7 @@ export const walletRouter = router({
         data: { syncStatus: "SYNCING" },
       });
 
-      // TODO: Dispatch sync job to BullMQ queue
-      // await syncQueue.add('sync-wallet', { walletId: wallet.id, chainId: wallet.chainId });
+      await addWalletSyncJob(wallet.id, wallet.chainId, wallet.lastSyncBlock ? Number(wallet.lastSyncBlock) : undefined);
 
       return {
         status: "queued" as const,
