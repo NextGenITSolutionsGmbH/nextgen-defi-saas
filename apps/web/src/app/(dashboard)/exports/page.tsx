@@ -503,7 +503,7 @@ export default function ExportsPage() {
 
             {/* File hash display for completed exports */}
             {exportsQuery.data.some(
-              (e) => e.status === "COMPLETED" && e.fileHash
+              (e: { status: string; fileHash: string | null }) => e.status === "COMPLETED" && e.fileHash
             ) && (
               <div className="border-t border-[var(--color-border-default)] px-6 py-3">
                 <details className="text-xs text-[var(--color-text-tertiary)]">
