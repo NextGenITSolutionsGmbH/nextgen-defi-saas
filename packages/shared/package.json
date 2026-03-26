@@ -30,7 +30,7 @@
   "scripts": {
     "build": "tsc --build",
     "type-check": "tsc --noEmit",
-    "lint": "eslint src/",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src/",
     "test:unit": "vitest run",
     "clean": "rm -rf dist .turbo node_modules"
   },

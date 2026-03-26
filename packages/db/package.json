@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc --build",
     "type-check": "tsc --noEmit",
-    "lint": "eslint src/",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src/",
     "clean": "rm -rf dist .turbo node_modules",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
