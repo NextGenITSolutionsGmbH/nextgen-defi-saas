@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Prisma } from "@prisma/client";
+import { $Enums, Prisma } from "@prisma/client";
 
 /**
  * Schema smoke-tests — verify that Prisma generated the expected
@@ -10,7 +10,7 @@ import { Prisma } from "@prisma/client";
 // --------------- Enum values -----------------
 
 describe("PlanTier enum", () => {
-  const values = Object.values(Prisma.PlanTier ?? {});
+  const values = Object.values($Enums.PlanTier ?? {});
 
   it("contains STARTER", () => {
     expect(values).toContain("STARTER");
@@ -34,7 +34,7 @@ describe("PlanTier enum", () => {
 });
 
 describe("SyncStatus enum", () => {
-  const values = Object.values(Prisma.SyncStatus ?? {});
+  const values = Object.values($Enums.SyncStatus ?? {});
 
   it("contains IDLE, SYNCING, COMPLETED, ERROR", () => {
     expect(values).toEqual(
@@ -48,7 +48,7 @@ describe("SyncStatus enum", () => {
 });
 
 describe("TxStatus enum", () => {
-  const values = Object.values(Prisma.TxStatus ?? {});
+  const values = Object.values($Enums.TxStatus ?? {});
 
   it("contains GREEN, YELLOW, RED, GRAY", () => {
     expect(values).toEqual(
@@ -62,7 +62,7 @@ describe("TxStatus enum", () => {
 });
 
 describe("Direction enum", () => {
-  const values = Object.values(Prisma.Direction ?? {});
+  const values = Object.values($Enums.Direction ?? {});
 
   it("contains IN and OUT", () => {
     expect(values).toEqual(expect.arrayContaining(["IN", "OUT"]));
@@ -74,7 +74,7 @@ describe("Direction enum", () => {
 });
 
 describe("PriceSource enum", () => {
-  const values = Object.values(Prisma.PriceSource ?? {});
+  const values = Object.values($Enums.PriceSource ?? {});
 
   it("contains FTSO, COINGECKO, CMC, MANUAL", () => {
     expect(values).toEqual(
@@ -88,7 +88,7 @@ describe("PriceSource enum", () => {
 });
 
 describe("TaxMethod enum", () => {
-  const values = Object.values(Prisma.TaxMethod ?? {});
+  const values = Object.values($Enums.TaxMethod ?? {});
 
   it("contains FIFO, LIFO, HIFO", () => {
     expect(values).toEqual(
@@ -102,7 +102,7 @@ describe("TaxMethod enum", () => {
 });
 
 describe("TaxEventType enum", () => {
-  const values = Object.values(Prisma.TaxEventType ?? {});
+  const values = Object.values($Enums.TaxEventType ?? {});
 
   it("contains PARAGRAPH_23 and PARAGRAPH_22_NR3", () => {
     expect(values).toEqual(
@@ -116,7 +116,7 @@ describe("TaxEventType enum", () => {
 });
 
 describe("LotStatus enum", () => {
-  const values = Object.values(Prisma.LotStatus ?? {});
+  const values = Object.values($Enums.LotStatus ?? {});
 
   it("contains OPEN, CLOSED, PARTIAL", () => {
     expect(values).toEqual(
@@ -130,7 +130,7 @@ describe("LotStatus enum", () => {
 });
 
 describe("ExportFormat enum", () => {
-  const values = Object.values(Prisma.ExportFormat ?? {});
+  const values = Object.values($Enums.ExportFormat ?? {});
 
   it("contains CSV, XLSX, PDF", () => {
     expect(values).toEqual(
@@ -144,7 +144,7 @@ describe("ExportFormat enum", () => {
 });
 
 describe("ExportStatus enum", () => {
-  const values = Object.values(Prisma.ExportStatus ?? {});
+  const values = Object.values($Enums.ExportStatus ?? {});
 
   it("contains PENDING, GENERATING, COMPLETED, FAILED", () => {
     expect(values).toEqual(
@@ -158,7 +158,7 @@ describe("ExportStatus enum", () => {
 });
 
 describe("SubStatus enum", () => {
-  const values = Object.values(Prisma.SubStatus ?? {});
+  const values = Object.values($Enums.SubStatus ?? {});
 
   it("contains ACTIVE, CANCELED, PAST_DUE, TRIALING", () => {
     expect(values).toEqual(
@@ -172,7 +172,7 @@ describe("SubStatus enum", () => {
 });
 
 describe("ModelChoice enum", () => {
-  const values = Object.values(Prisma.ModelChoice ?? {});
+  const values = Object.values($Enums.ModelChoice ?? {});
 
   it("contains MODEL_A and MODEL_B", () => {
     expect(values).toEqual(
