@@ -15,51 +15,64 @@ env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
   ESLINT_USE_FLAT_CONFIG: 'false'
-  DATABASE_URL: postgresql://postgres:postgres@postgres:5432/defi_tracker_test
-  REDIS_URL: redis://redis:6379
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/defi_tracker_test
+  REDIS_URL: redis://localhost:6379
 
 jobs:
   lint-and-test:
     name: Lint & Test
     runs-on: [self-hosted, linux, x64]
-    container: node:20
     timeout-minutes: 20
 
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: defi_tracker_test
-        options: >-
-          --health-cmd="pg_isready -U postgres"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-          --health-start-period=10s
-
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     steps:
+      - name: Start service containers
+        run: |
+          # Clean up any leftover containers from previous runs
+          docker rm -f pg-ci-${{ github.run_id }} redis-ci-${{ github.run_id }} 2>/dev/null || true
+
+          # Start PostgreSQL sharing runner's network namespace
+          docker run -d --name pg-ci-${{ github.run_id }} \
+            --network container:$HOSTNAME \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=defi_tracker_test \
+            postgres:16-alpine
+
+          # Start Redis sharing runner's network namespace
+          docker run -d --name redis-ci-${{ github.run_id }} \
+            --network container:$HOSTNAME \
+            redis:7-alpine
+
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL..."
+          for i in $(seq 1 30); do
+            docker exec pg-ci-${{ github.run_id }} pg_isready -U postgres 2>/dev/null && break
+            sleep 1
+          done
+          docker exec pg-ci-${{ github.run_id }} pg_isready -U postgres
+
+          # Wait for Redis to be ready
+          echo "Waiting for Redis..."
+          for i in $(seq 1 15); do
+            docker exec redis-ci-${{ github.run_id }} redis-cli ping 2>/dev/null && break
+            sleep 1
+          done
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - name: Install pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -82,3 +95,8 @@ jobs:
       - name: Security audit
         continue-on-error: true
         run: pnpm dlx audit-ci --high
+
+      - name: Cleanup service containers
+        if: always()
+        run: |
+          docker rm -f pg-ci-${{ github.run_id }} redis-ci-${{ github.run_id }} 2>/dev/null || true

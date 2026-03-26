@@ -12,49 +12,62 @@ env:
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
   NODE_ENV: test
-  DATABASE_URL: postgresql://postgres:postgres@postgres:5432/defi_tracker_e2e
-  REDIS_URL: redis://redis:6379
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/defi_tracker_e2e
+  REDIS_URL: redis://localhost:6379
 
 jobs:
   e2e:
     name: E2E & Accessibility
     runs-on: [self-hosted, linux, x64]
-    container: node:20
     timeout-minutes: 30
 
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: defi_tracker_e2e
-        options: >-
-          --health-cmd="pg_isready -U postgres"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-          --health-start-period=10s
-
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     steps:
+      - name: Start service containers
+        run: |
+          # Clean up any leftover containers from previous runs
+          docker rm -f pg-e2e-${{ github.run_id }} redis-e2e-${{ github.run_id }} 2>/dev/null || true
+
+          # Start PostgreSQL sharing runner's network namespace
+          docker run -d --name pg-e2e-${{ github.run_id }} \
+            --network container:$HOSTNAME \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=defi_tracker_e2e \
+            postgres:16-alpine
+
+          # Start Redis sharing runner's network namespace
+          docker run -d --name redis-e2e-${{ github.run_id }} \
+            --network container:$HOSTNAME \
+            redis:7-alpine
+
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL..."
+          for i in $(seq 1 30); do
+            docker exec pg-e2e-${{ github.run_id }} pg_isready -U postgres 2>/dev/null && break
+            sleep 1
+          done
+          docker exec pg-e2e-${{ github.run_id }} pg_isready -U postgres
+
+          # Wait for Redis to be ready
+          echo "Waiting for Redis..."
+          for i in $(seq 1 15); do
+            docker exec redis-e2e-${{ github.run_id }} redis-cli ping 2>/dev/null && break
+            sleep 1
+          done
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -89,3 +102,8 @@ jobs:
             **/playwright-report/
             **/test-results/
           retention-days: 14
+
+      - name: Cleanup service containers
+        if: always()
+        run: |
+          docker rm -f pg-e2e-${{ github.run_id }} redis-e2e-${{ github.run_id }} 2>/dev/null || true
