@@ -39,8 +39,11 @@ COPY --from=builder /app/node_modules/.pnpm/@prisma+engines@*/node_modules/@pris
 COPY --from=builder /app/node_modules/.pnpm/prisma@*/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/.pnpm/@prisma+client@*/node_modules/.prisma ./node_modules/.prisma
 
+# Startup entrypoint: migrate → seed → start
+COPY --chown=nextjs:nodejs docker/entrypoint.sh ./entrypoint.sh
+
 USER nextjs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "echo 'Running database migrations...' && npx prisma migrate deploy --schema packages/db/prisma/schema.prisma || echo 'Migration warning: continuing with startup' && echo 'Seeding database...' && npx prisma db execute --file packages/db/prisma/seed.sql --schema packages/db/prisma/schema.prisma || echo 'Seed warning: continuing' && echo 'Starting application...' && node apps/web/server.js"]
+CMD ["sh", "entrypoint.sh"]
