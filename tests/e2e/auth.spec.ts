@@ -5,7 +5,7 @@ const TEST_USER = {
   password: "E2eT3st!Secure#2025",
 };
 
-test.describe("Authentication flow", () => {
+test.describe.serial("Authentication flow", () => {
   test("register a new account", async ({ page }) => {
     await page.goto("/register");
 
@@ -45,7 +45,7 @@ test.describe("Authentication flow", () => {
     // Should remain on login page and show an error
     await expect(page).toHaveURL(/\/login/);
     const errorMessage = page.getByText(/invalid|incorrect|failed|error/i);
-    await expect(errorMessage).toBeVisible({ timeout: 5_000 });
+    await expect(errorMessage).toBeVisible();
   });
 
   test("protected route redirects unauthenticated users", async ({ page }) => {
