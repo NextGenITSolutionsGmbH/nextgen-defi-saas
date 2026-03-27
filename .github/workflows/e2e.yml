@@ -15,7 +15,8 @@ env:
   DATABASE_URL: postgresql://postgres:postgres@localhost:5432/defi_tracker_e2e
   REDIS_URL: redis://localhost:6379
   NEXTAUTH_SECRET: e2e-test-secret-do-not-use-in-production
-  NEXTAUTH_URL: http://localhost:3000
+  AUTH_SECRET: e2e-test-secret-do-not-use-in-production
+  NEXTAUTH_URL: http://localhost:3008
 
 jobs:
   e2e:

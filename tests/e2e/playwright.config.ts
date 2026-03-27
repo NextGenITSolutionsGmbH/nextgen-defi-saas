@@ -39,8 +39,8 @@ export default defineConfig({
 
   webServer: {
     command: isCI
-      ? `pnpm --filter @defi-tracker/web start --port ${port}`
-      : `pnpm --filter @defi-tracker/web dev --port ${port}`,
+      ? `PORT=${port} pnpm --filter @defi-tracker/web start`
+      : `PORT=${port} pnpm --filter @defi-tracker/web dev`,
     url: `${baseURL}/api/health`,
     reuseExistingServer: false,
     timeout: 120_000,
