@@ -90,7 +90,7 @@ DeFi Tracker SaaS solves the tax reporting problem for Flare Network DeFi users 
 
 | Layer | Technology |
 |-------|-----------|
-| **Frontend** | Next.js 15 (App Router), React 19, Tailwind CSS, shadcn/ui |
+| **Frontend** | Next.js 15 (App Router), React 19, Tailwind CSS + PostCSS, shadcn/ui |
 | **API** | tRPC 11 + Zod validation (end-to-end type safety) |
 | **Database** | PostgreSQL 16 + Prisma ORM v6 |
 | **Queue** | Redis 7 + BullMQ v5 (wallet-sync, price-fetch, export-gen) |
