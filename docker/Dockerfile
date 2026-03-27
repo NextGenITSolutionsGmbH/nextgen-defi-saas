@@ -1,7 +1,7 @@
 # ── Stage 1: Install and Build ───────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:24.14.1-alpine AS builder
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
 
 # Copy all workspace files
@@ -17,7 +17,7 @@ RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
 RUN pnpm turbo build --filter=@defi-tracker/web
 
 # ── Stage 2: Production runner ───────────────────────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:24.14.1-alpine AS runner
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 

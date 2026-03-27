@@ -48,3 +48,6 @@ logs/
 # Claude Code
 .claude/.credentials.json
 .claude/settings.local.json
+
+# Claude Code MCP server configuration (developer-specific)
+.mcp.json
