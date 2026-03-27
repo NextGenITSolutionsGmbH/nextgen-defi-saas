@@ -53,7 +53,9 @@ export class WalletSyncService {
   }
 
   /**
-   * Full sync: fetch all transactions from fromBlock to latest block
+   * Full sync: fetch all transactions from fromBlock to latest block.
+   * Uses adaptive chunk sizing: chunks that finish quickly are doubled,
+   * chunks that take too long are halved.
    */
   async syncWallet(
     walletAddress: string,
@@ -72,13 +74,20 @@ export class WalletSyncService {
       `[WalletSync] Starting sync for ${address} from block ${fromBlock} to ${latestBlock}`,
     );
 
-    // Process in chunks to manage memory and provide progress
-    const CHUNK_SIZE = 10_000;
+    // Adaptive chunk sizing parameters
+    const DEFAULT_CHUNK_SIZE = 10_000;
+    const MIN_CHUNK_SIZE = 2_048;
+    const MAX_CHUNK_SIZE = 50_000;
+    const FAST_THRESHOLD_MS = 5_000;
+    const SLOW_THRESHOLD_MS = 15_000;
+
+    let chunkSize = DEFAULT_CHUNK_SIZE;
     let currentFrom = fromBlock;
     const allTransactions: ProcessedTransaction[] = [];
 
     while (currentFrom <= latestBlock) {
-      const currentTo = Math.min(currentFrom + CHUNK_SIZE - 1, latestBlock);
+      const currentTo = Math.min(currentFrom + chunkSize - 1, latestBlock);
+      const chunkStart = Date.now();
 
       try {
         const transactions = await this.rpc.getWalletTransactions(
@@ -92,6 +101,14 @@ export class WalletSyncService {
           allTransactions.push(processed);
           totalTxFound++;
           totalEventsDecoded += processed.events.length;
+        }
+
+        // Adaptive chunk sizing: adjust based on chunk elapsed time
+        const chunkElapsedMs = Date.now() - chunkStart;
+        if (chunkElapsedMs < FAST_THRESHOLD_MS) {
+          chunkSize = Math.min(chunkSize * 2, MAX_CHUNK_SIZE);
+        } else if (chunkElapsedMs > SLOW_THRESHOLD_MS) {
+          chunkSize = Math.max(Math.floor(chunkSize / 2), MIN_CHUNK_SIZE);
         }
 
         // Report progress
@@ -115,6 +132,8 @@ export class WalletSyncService {
         const message = error instanceof Error ? error.message : String(error);
         errors.push(`Block range ${currentFrom}-${currentTo}: ${message}`);
         console.error(`[WalletSync] Error in block range ${currentFrom}-${currentTo}: ${message}`);
+        // On error, reduce chunk size to be more conservative
+        chunkSize = Math.max(Math.floor(chunkSize / 2), MIN_CHUNK_SIZE);
       }
 
       currentFrom = currentTo + 1;

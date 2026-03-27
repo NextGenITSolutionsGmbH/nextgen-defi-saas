@@ -557,13 +557,56 @@ export default function SettingsPage() {
     enabled: false, // manual trigger
   });
 
+  // Password change
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  const changePasswordMutation = trpc.user.changePassword.useMutation({
+    onSuccess: () => {
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordError("");
+    },
+    onError: (err) => {
+      setPasswordError(err.message);
+      setPasswordSuccess(false);
+    },
+  });
+
   // Delete account
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // Notification preferences
+  const notifPrefsQuery = trpc.notification.getPreferences.useQuery();
+  const updateNotifMutation = trpc.notification.updatePreferences.useMutation({
+    onSuccess: () => notifPrefsQuery.refetch(),
+  });
 
   // Plan
   const updatePlanMutation = trpc.user.updatePlan.useMutation({
     onSuccess: () => utils.user.me.invalidate(),
   });
+
+  // Stripe checkout for paid plans
+  const checkoutMutation = trpc.user.createCheckoutSession.useMutation({
+    onSuccess: (data) => {
+      if (data.url) window.location.href = data.url;
+    },
+  });
+
+  // Stripe billing portal for managing subscriptions
+  const billingPortalMutation =
+    trpc.user.createBillingPortalSession.useMutation({
+      onSuccess: (data) => {
+        if (data.url) window.location.href = data.url;
+      },
+    });
 
   const currentPlan = userQuery.data?.plan ?? "STARTER";
 
@@ -814,25 +857,175 @@ export default function SettingsPage() {
             )}
           </div>
 
-          {/* Password change placeholder */}
-          <div className="flex items-center justify-between border-t border-[var(--color-border-default)] pt-5">
-            <div className="flex items-center gap-3">
-              <Lock size={18} className="text-[var(--color-text-tertiary)]" />
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                  Passwort ändern
-                </p>
-                <p className="text-xs text-[var(--color-text-tertiary)]">
-                  Coming soon
-                </p>
+          {/* Password change */}
+          <div className="border-t border-[var(--color-border-default)] pt-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Lock
+                  size={18}
+                  className="text-[var(--color-text-tertiary)]"
+                />
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                    Passwort ändern
+                  </p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">
+                    Aktuelles Passwort bestätigen und neues Passwort festlegen
+                  </p>
+                </div>
               </div>
+              {!showPasswordForm && (
+                <button
+                  onClick={() => {
+                    setShowPasswordForm(true);
+                    setPasswordSuccess(false);
+                    setPasswordError("");
+                  }}
+                  className="flex items-center gap-2 rounded-lg border border-[var(--color-border-default)] px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-secondary)]"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              )}
             </div>
-            <button
-              disabled
-              className="flex items-center gap-2 rounded-lg border border-[var(--color-border-default)] px-4 py-2 text-sm font-medium text-[var(--color-text-tertiary)] opacity-50"
-            >
-              <ChevronRight size={14} />
-            </button>
+
+            {showPasswordForm && (
+              <div className="mt-4 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-secondary)] p-5">
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+                      Aktuelles Passwort
+                    </label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => {
+                        setCurrentPassword(e.target.value);
+                        setPasswordError("");
+                        setPasswordSuccess(false);
+                      }}
+                      placeholder="Ihr aktuelles Passwort"
+                      className="w-full rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-primary)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+                      Neues Passwort
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        setPasswordError("");
+                        setPasswordSuccess(false);
+                      }}
+                      placeholder="Min. 8 Zeichen, 1 Großbuchstabe, 1 Zahl"
+                      className="w-full rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-primary)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+                      Neues Passwort bestätigen
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        setPasswordError("");
+                        setPasswordSuccess(false);
+                      }}
+                      placeholder="Passwort wiederholen"
+                      className="w-full rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-primary)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent-primary)]"
+                    />
+                  </div>
+
+                  {passwordError && (
+                    <p className="text-sm text-[var(--color-accent-danger)]">
+                      {passwordError}
+                    </p>
+                  )}
+
+                  {passwordSuccess && (
+                    <div className="flex items-center gap-2 rounded-lg border border-[var(--color-accent-success)]/30 bg-[var(--color-accent-success)]/5 px-3 py-2">
+                      <Check
+                        size={14}
+                        className="text-[var(--color-accent-success)]"
+                      />
+                      <p className="text-sm text-[var(--color-accent-success)]">
+                        Passwort erfolgreich geändert.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setPasswordError("");
+                        setPasswordSuccess(false);
+
+                        if (newPassword.length < 8) {
+                          setPasswordError(
+                            "Das Passwort muss mindestens 8 Zeichen lang sein."
+                          );
+                          return;
+                        }
+                        if (!/[A-Z]/.test(newPassword)) {
+                          setPasswordError(
+                            "Das Passwort muss mindestens einen Großbuchstaben enthalten."
+                          );
+                          return;
+                        }
+                        if (!/[0-9]/.test(newPassword)) {
+                          setPasswordError(
+                            "Das Passwort muss mindestens eine Zahl enthalten."
+                          );
+                          return;
+                        }
+                        if (newPassword !== confirmPassword) {
+                          setPasswordError(
+                            "Die Passwörter stimmen nicht überein."
+                          );
+                          return;
+                        }
+
+                        changePasswordMutation.mutate({
+                          currentPassword,
+                          newPassword,
+                        });
+                      }}
+                      disabled={
+                        !currentPassword ||
+                        !newPassword ||
+                        !confirmPassword ||
+                        changePasswordMutation.isPending
+                      }
+                      className="flex items-center gap-2 rounded-lg bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-medium text-white transition hover:bg-[var(--color-accent-primary-hover)] disabled:opacity-50"
+                    >
+                      {changePasswordMutation.isPending && (
+                        <Loader2 size={14} className="animate-spin" />
+                      )}
+                      Passwort ändern
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowPasswordForm(false);
+                        setCurrentPassword("");
+                        setNewPassword("");
+                        setConfirmPassword("");
+                        setPasswordError("");
+                        setPasswordSuccess(false);
+                      }}
+                      className="rounded-lg border border-[var(--color-border-default)] px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-tertiary)]"
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </SectionCard>
@@ -904,48 +1097,63 @@ export default function SettingsPage() {
       </SectionCard>
 
       {/* ================================================================= */}
-      {/* Section 5: Notifications (placeholder) */}
+      {/* Section 5: Notifications */}
       {/* ================================================================= */}
       <SectionCard icon={Bell} title="Benachrichtigungen">
         <div className="space-y-4">
-          {[
+          {([
             {
+              key: "exportComplete" as const,
               label: "Export abgeschlossen",
               desc: "E-Mail erhalten, wenn ein Export bereit ist",
             },
             {
+              key: "syncError" as const,
               label: "Sync-Fehler",
               desc: "E-Mail bei Wallet-Sync-Problemen",
             },
             {
+              key: "taxReminder" as const,
               label: "Steuer-Erinnerungen",
               desc: "Erinnerungen zu wichtigen Steuerfristen",
             },
-          ].map((n) => (
-            <div
-              key={n.label}
-              className="flex items-center justify-between"
-            >
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                  {n.label}
-                </p>
-                <p className="text-xs text-[var(--color-text-tertiary)]">
-                  {n.desc}
-                </p>
-              </div>
-              <button
-                disabled
-                className="relative inline-flex h-6 w-11 cursor-not-allowed items-center rounded-full bg-[var(--color-bg-tertiary)] opacity-50 transition"
-                title="Coming soon"
+          ]).map((n) => {
+            const isEnabled = notifPrefsQuery.data?.[n.key] ?? false;
+            return (
+              <div
+                key={n.key}
+                className="flex items-center justify-between"
               >
-                <span className="inline-block h-4 w-4 translate-x-1 rounded-full bg-[var(--color-text-tertiary)] transition" />
-              </button>
-            </div>
-          ))}
-          <p className="text-xs text-[var(--color-text-tertiary)] italic">
-            E-Mail-Benachrichtigungen werden bald verfügbar sein.
-          </p>
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                    {n.label}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">
+                    {n.desc}
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    updateNotifMutation.mutate({ [n.key]: !isEnabled })
+                  }
+                  disabled={
+                    notifPrefsQuery.isLoading || updateNotifMutation.isPending
+                  }
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition disabled:opacity-50 ${
+                    isEnabled
+                      ? "bg-[var(--color-accent-primary)]"
+                      : "bg-[var(--color-bg-tertiary)]"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 rounded-full bg-white transition ${
+                      isEnabled ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            );
+          })}
         </div>
       </SectionCard>
 
@@ -999,12 +1207,19 @@ export default function SettingsPage() {
               </ul>
               <button
                 onClick={() => {
-                  if (plan.id !== currentPlan) {
+                  if (plan.id === currentPlan) return;
+                  if (plan.id === "STARTER") {
                     updatePlanMutation.mutate({ plan: plan.id });
+                  } else {
+                    checkoutMutation.mutate({
+                      plan: plan.id as "PRO" | "BUSINESS" | "KANZLEI",
+                    });
                   }
                 }}
                 disabled={
-                  plan.id === currentPlan || updatePlanMutation.isPending
+                  plan.id === currentPlan ||
+                  updatePlanMutation.isPending ||
+                  checkoutMutation.isPending
                 }
                 className={`mt-4 w-full rounded-lg py-2 text-sm font-medium transition ${
                   plan.id === currentPlan
@@ -1012,8 +1227,23 @@ export default function SettingsPage() {
                     : "bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary-hover)]"
                 }`}
               >
-                {plan.id === currentPlan ? "Aktueller Plan" : "Upgrade"}
+                {plan.id === currentPlan
+                  ? "Aktueller Plan"
+                  : checkoutMutation.isPending
+                    ? "Weiterleitung…"
+                    : "Upgrade"}
               </button>
+              {plan.id === currentPlan && currentPlan !== "STARTER" && (
+                <button
+                  onClick={() => billingPortalMutation.mutate()}
+                  disabled={billingPortalMutation.isPending}
+                  className="mt-2 w-full rounded-lg border border-[var(--color-border-default)] py-2 text-sm font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-bg-secondary)]"
+                >
+                  {billingPortalMutation.isPending
+                    ? "Weiterleitung…"
+                    : "Abo verwalten"}
+                </button>
+              )}
             </div>
           ))}
         </div>

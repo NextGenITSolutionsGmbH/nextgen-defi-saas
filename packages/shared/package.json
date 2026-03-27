@@ -40,6 +40,7 @@
     "vitest": "^3.0.0"
   },
   "dependencies": {
+    "exceljs": "^4.4.0",
     "ioredis": "^5.10.1"
   }
 }

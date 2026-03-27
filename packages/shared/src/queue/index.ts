@@ -37,6 +37,9 @@ export const EXPORT_QUEUE = "export-gen" as const;
 /** Queue for token price fetching jobs (FTSO / CoinGecko / CMC) */
 export const PRICE_FETCH_QUEUE = "price-fetch" as const;
 
+/** Queue for email notification sending */
+export const EMAIL_QUEUE = "email-send" as const;
+
 // ---------------------------------------------------------------------------
 // Job Data Interfaces
 // ---------------------------------------------------------------------------
@@ -63,4 +66,13 @@ export interface PriceFetchJobData {
   tokenAddress: string;
   chainId: number;
   timestampUnix: number;
+}
+
+/** Payload dispatched into the email-send queue */
+export interface EmailJobData {
+  to: string;
+  subject: string;
+  html: string;
+  userId: string;
+  notificationType: "EXPORT_COMPLETE" | "SYNC_ERROR" | "TAX_REMINDER";
 }

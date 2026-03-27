@@ -3,9 +3,11 @@ import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../trpc";
 import {
   verifyPassword,
+  hashPassword,
   generateTOTPSecret,
   verifyTOTP,
 } from "@/lib/auth-utils";
+import { stripe, STRIPE_PRICE_IDS } from "@/lib/stripe";
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -27,6 +29,15 @@ const verify2faSchema = z.object({
 
 const disable2faSchema = z.object({
   token: z.string().length(6, "TOTP token must be 6 digits"),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Must contain at least one number"),
 });
 
 const deleteAccountSchema = z.object({
@@ -111,6 +122,48 @@ export const userRouter = router({
       // Tax method is per-export (stored on Export model).
       // This endpoint validates the choice and returns it for client-side persistence.
       return { method: input.method };
+    }),
+
+  // =========================================================================
+  // Password — Change password
+  // =========================================================================
+
+  /**
+   * Change the user's password.
+   * Requires the current password for verification.
+   */
+  changePassword: protectedProcedure
+    .input(changePasswordSchema)
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.user.id },
+        select: { passwordHash: true },
+      });
+
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      const passwordValid = await verifyPassword(
+        input.currentPassword,
+        user.passwordHash
+      );
+
+      if (!passwordValid) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Current password is incorrect.",
+        });
+      }
+
+      const newHash = await hashPassword(input.newPassword);
+
+      await ctx.db.user.update({
+        where: { id: ctx.user.id },
+        data: { passwordHash: newHash },
+      });
+
+      return { success: true };
     }),
 
   // =========================================================================
@@ -411,4 +464,86 @@ export const userRouter = router({
           "Account and all associated data have been permanently deleted (DSGVO Art. 17).",
       };
     }),
+
+  // =========================================================================
+  // Stripe — Checkout & Billing Portal
+  // =========================================================================
+
+  createCheckoutSession: protectedProcedure
+    .input(z.object({ plan: z.enum(["PRO", "BUSINESS", "KANZLEI"]) }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.user.id },
+        select: { id: true, email: true, stripeCustomerId: true },
+      });
+
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+
+      let customerId = user.stripeCustomerId;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: { userId: user.id },
+        });
+        customerId = customer.id;
+
+        await ctx.db.user.update({
+          where: { id: user.id },
+          data: { stripeCustomerId: customerId },
+        });
+      }
+
+      const priceId = STRIPE_PRICE_IDS[input.plan];
+      if (!priceId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `No Stripe price configured for plan: ${input.plan}`,
+        });
+      }
+
+      const baseUrl =
+        process.env.NEXTAUTH_URL ??
+        process.env.NEXT_PUBLIC_APP_URL ??
+        "http://localhost:3000";
+
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: "subscription",
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${baseUrl}/settings?checkout=success`,
+        cancel_url: `${baseUrl}/settings?checkout=cancel`,
+        metadata: { userId: user.id, plan: input.plan },
+      });
+
+      return { url: session.url };
+    }),
+
+  createBillingPortalSession: protectedProcedure.mutation(async ({ ctx }) => {
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.user.id },
+      select: { stripeCustomerId: true },
+    });
+
+    if (!user?.stripeCustomerId) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message:
+          "No Stripe customer found. Please subscribe to a plan first.",
+      });
+    }
+
+    const baseUrl =
+      process.env.NEXTAUTH_URL ??
+      process.env.NEXT_PUBLIC_APP_URL ??
+      "http://localhost:3000";
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: `${baseUrl}/settings`,
+    });
+
+    return { url: session.url };
+  }),
 });

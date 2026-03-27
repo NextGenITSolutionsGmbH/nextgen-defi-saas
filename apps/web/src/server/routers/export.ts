@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../trpc";
 import { addExportJob } from '../queue';
+import { enforceExportFormat } from "../lib/plan-limits";
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -49,6 +50,8 @@ export const exportRouter = router({
   create: protectedProcedure
     .input(createExportSchema)
     .mutation(async ({ ctx, input }) => {
+      enforceExportFormat(ctx.user.plan, input.format);
+
       // Validate wallet ownership if specific wallets were selected
       if (input.walletIds && input.walletIds.length > 0) {
         const ownedWallets = await ctx.db.wallet.count({

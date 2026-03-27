@@ -9,6 +9,11 @@ on:
         description: "Target URL for k6 tests"
         required: false
         default: ""
+      run_api_scenarios:
+        description: "Run authenticated API scenario tests"
+        required: false
+        type: boolean
+        default: false
 
 env:
   K6_TARGET_URL: ${{ github.event.inputs.target_url || secrets.STAGING_URL }}
@@ -33,17 +38,44 @@ jobs:
       - name: Run k6 smoke tests
         run: |
           k6 run \
-            --out json=k6-results.json \
+            --out json=k6-smoke-results.json \
+            --summary-export=k6-smoke-summary.json \
             --tag testid=smoke-${{ github.run_id }} \
-            --env TARGET_URL="${K6_TARGET_URL}" \
+            --env BASE_URL="${K6_TARGET_URL}" \
             tests/k6/smoke.js
+
+      - name: Run k6 load tests
+        run: |
+          k6 run \
+            --out json=k6-load-results.json \
+            --summary-export=k6-load-summary.json \
+            --tag testid=load-${{ github.run_id }} \
+            --env BASE_URL="${K6_TARGET_URL}" \
+            tests/k6/load.js
+
+      - name: Run k6 DB performance tests
+        run: |
+          k6 run \
+            --out json=k6-db-perf-results.json \
+            --summary-export=k6-db-perf-summary.json \
+            --tag testid=db-perf-${{ github.run_id }} \
+            --env BASE_URL="${K6_TARGET_URL}" \
+            --env TEST_EMAIL="${{ secrets.PERF_TEST_EMAIL }}" \
+            --env TEST_PASSWORD="${{ secrets.PERF_TEST_PASSWORD }}" \
+            tests/k6/db-perf.js
 
       - name: Upload k6 results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: k6-results-${{ github.run_id }}
-          path: k6-results.json
+          path: |
+            k6-smoke-results.json
+            k6-smoke-summary.json
+            k6-load-results.json
+            k6-load-summary.json
+            k6-db-perf-results.json
+            k6-db-perf-summary.json
           retention-days: 30
 
       - name: Post summary
@@ -55,8 +87,170 @@ jobs:
           echo "- **Target:** ${K6_TARGET_URL}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Triggered by:** ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          if [ -f k6-results.json ]; then
-            echo "Results artifact uploaded successfully." >> "$GITHUB_STEP_SUMMARY"
+
+          for suite in smoke load db-perf; do
+            summary_file="k6-${suite}-summary.json"
+            echo "### ${suite} test" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            if [ -f "$summary_file" ]; then
+              python3 -c "
+          import json, sys
+          try:
+              d = json.load(open('$summary_file'))
+              m = d.get('metrics', {})
+              dur = m.get('http_req_duration', {}).get('values', {})
+              p95 = dur.get('p(95)', 'N/A')
+              med = dur.get('med', 'N/A')
+              avg = dur.get('avg', 'N/A')
+              mx  = dur.get('max', 'N/A')
+              fails = m.get('http_req_failed', {}).get('values', {}).get('rate', 'N/A')
+              checks = m.get('checks', {}).get('values', {}).get('rate', 'N/A')
+              reqs = m.get('http_reqs', {}).get('values', {}).get('count', 'N/A')
+              print(f'| Metric | Value |')
+              print(f'|--------|-------|')
+              print(f'| Total requests | {reqs} |')
+              if isinstance(p95, (int, float)):
+                  print(f'| p95 response time | {p95:.1f} ms |')
+              else:
+                  print(f'| p95 response time | {p95} |')
+              if isinstance(med, (int, float)):
+                  print(f'| Median response time | {med:.1f} ms |')
+              else:
+                  print(f'| Median response time | {med} |')
+              if isinstance(avg, (int, float)):
+                  print(f'| Avg response time | {avg:.1f} ms |')
+              else:
+                  print(f'| Avg response time | {avg} |')
+              if isinstance(mx, (int, float)):
+                  print(f'| Max response time | {mx:.1f} ms |')
+              else:
+                  print(f'| Max response time | {mx} |')
+              if isinstance(fails, (int, float)):
+                  print(f'| Error rate | {fails*100:.2f}% |')
+              else:
+                  print(f'| Error rate | {fails} |')
+              if isinstance(checks, (int, float)):
+                  print(f'| Check pass rate | {checks*100:.2f}% |')
+              else:
+                  print(f'| Check pass rate | {checks} |')
+          except Exception as e:
+              print(f'Error parsing summary: {e}')
+          " >> "$GITHUB_STEP_SUMMARY" 2>&1
+            else
+              echo "No results file found." >> "$GITHUB_STEP_SUMMARY"
+            fi
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+  k6-api-scenarios:
+    name: k6 API Scenario Tests
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_api_scenarios == 'true'
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq k6
+
+      - name: Run k6 API scenario tests
+        run: |
+          k6 run \
+            --out json=k6-api-scenarios-results.json \
+            --summary-export=k6-api-scenarios-summary.json \
+            --tag testid=api-scenarios-${{ github.run_id }} \
+            --env BASE_URL="${K6_TARGET_URL}" \
+            --env TEST_EMAIL="${{ secrets.PERF_TEST_EMAIL }}" \
+            --env TEST_PASSWORD="${{ secrets.PERF_TEST_PASSWORD }}" \
+            tests/k6/api-scenarios.js
+
+      - name: Upload k6 API scenario results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-api-scenarios-results-${{ github.run_id }}
+          path: |
+            k6-api-scenarios-results.json
+            k6-api-scenarios-summary.json
+          retention-days: 30
+
+      - name: Post API scenario summary
+        if: always()
+        run: |
+          echo "## k6 API Scenario Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Run ID:** ${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Target:** ${K6_TARGET_URL}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          summary_file="k6-api-scenarios-summary.json"
+          if [ -f "$summary_file" ]; then
+            python3 -c "
+          import json, sys
+          try:
+              d = json.load(open('$summary_file'))
+              m = d.get('metrics', {})
+              dur = m.get('http_req_duration', {}).get('values', {})
+              p95 = dur.get('p(95)', 'N/A')
+              med = dur.get('med', 'N/A')
+              avg = dur.get('avg', 'N/A')
+              mx  = dur.get('max', 'N/A')
+              fails = m.get('http_req_failed', {}).get('values', {}).get('rate', 'N/A')
+              checks = m.get('checks', {}).get('values', {}).get('rate', 'N/A')
+              reqs = m.get('http_reqs', {}).get('values', {}).get('count', 'N/A')
+              print(f'| Metric | Value |')
+              print(f'|--------|-------|')
+              print(f'| Total requests | {reqs} |')
+              if isinstance(p95, (int, float)):
+                  print(f'| p95 response time | {p95:.1f} ms |')
+              else:
+                  print(f'| p95 response time | {p95} |')
+              if isinstance(med, (int, float)):
+                  print(f'| Median response time | {med:.1f} ms |')
+              else:
+                  print(f'| Median response time | {med} |')
+              if isinstance(avg, (int, float)):
+                  print(f'| Avg response time | {avg:.1f} ms |')
+              else:
+                  print(f'| Avg response time | {avg} |')
+              if isinstance(mx, (int, float)):
+                  print(f'| Max response time | {mx:.1f} ms |')
+              else:
+                  print(f'| Max response time | {mx} |')
+              if isinstance(fails, (int, float)):
+                  print(f'| Error rate | {fails*100:.2f}% |')
+              else:
+                  print(f'| Error rate | {fails} |')
+              if isinstance(checks, (int, float)):
+                  print(f'| Check pass rate | {checks*100:.2f}% |')
+              else:
+                  print(f'| Check pass rate | {checks} |')
+
+              # Per-group metrics
+              group_metrics = {k: v for k, v in m.items() if k.startswith('group_duration')}
+              if group_metrics:
+                  print()
+                  print('### Per-group p95 latency')
+                  print()
+                  print('| Group | p95 (ms) |')
+                  print('|-------|----------|')
+                  for gname, gdata in sorted(group_metrics.items()):
+                      vals = gdata.get('values', {})
+                      gp95 = vals.get('p(95)', 'N/A')
+                      label = gname.replace('group_duration{group:::', '').rstrip('}')
+                      if isinstance(gp95, (int, float)):
+                          print(f'| {label} | {gp95:.1f} |')
+                      else:
+                          print(f'| {label} | {gp95} |')
+          except Exception as e:
+              print(f'Error parsing summary: {e}')
+          " >> "$GITHUB_STEP_SUMMARY" 2>&1
           else
             echo "No results file found." >> "$GITHUB_STEP_SUMMARY"
           fi

@@ -95,13 +95,14 @@ export type {
   HaltefristEntry,
 } from './tax';
 
-// Export engine (CoinTracking CSV, PDF report, GoBD audit log)
+// Export engine (CoinTracking CSV, XLSX, PDF report, GoBD audit log)
 export {
   formatDecimalDE,
   formatDateCT,
   rowToCsvLine,
   generateCoinTrackingCsv,
   generateCoinTrackingCsvBuffer,
+  generateCoinTrackingXlsxBuffer,
   validateCoinTrackingRow,
   generateTaxReportHtml,
   computeAuditHash,

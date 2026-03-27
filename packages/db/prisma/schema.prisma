@@ -118,21 +118,23 @@ enum SubStatus {
 
 /// 1. User
 model User {
-  id           String    @id @default(uuid()) @map("id") @db.Uuid
-  email        String    @unique @map("email") @db.VarChar(320)
-  passwordHash String    @map("password_hash") @db.Text
-  plan         PlanTier  @default(STARTER) @map("plan")
-  totpSecret   String?   @map("totp_secret") @db.VarChar(128)
-  totpEnabled  Boolean   @default(false) @map("totp_enabled")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+  id               String    @id @default(uuid()) @map("id") @db.Uuid
+  email            String    @unique @map("email") @db.VarChar(320)
+  passwordHash     String    @map("password_hash") @db.Text
+  plan             PlanTier  @default(STARTER) @map("plan")
+  stripeCustomerId String?   @unique @map("stripe_customer_id") @db.VarChar(255)
+  totpSecret       String?   @map("totp_secret") @db.VarChar(128)
+  totpEnabled      Boolean   @default(false) @map("totp_enabled")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz
 
-  wallets       Wallet[]
-  taxLots       TaxLot[]
-  taxEvents     TaxEvent[]
-  exports       Export[]
-  subscriptions Subscription[]
+  wallets             Wallet[]
+  taxLots             TaxLot[]
+  taxEvents           TaxEvent[]
+  exports             Export[]
+  subscriptions       Subscription[]
+  notificationPrefs   NotificationPreference?
 
   @@map("users")
 }
@@ -328,7 +330,22 @@ model PriceAuditLog {
   @@map("price_audit_logs")
 }
 
-/// 12. Subscription
+/// 12. NotificationPreference
+model NotificationPreference {
+  id             String   @id @default(uuid()) @map("id") @db.Uuid
+  userId         String   @unique @map("user_id") @db.Uuid
+  exportComplete Boolean  @default(false) @map("export_complete")
+  syncError      Boolean  @default(false) @map("sync_error")
+  taxReminder    Boolean  @default(false) @map("tax_reminder")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+/// 13. Subscription
 model Subscription {
   id                 String    @id @default(uuid()) @map("id") @db.Uuid
   userId             String    @map("user_id") @db.Uuid

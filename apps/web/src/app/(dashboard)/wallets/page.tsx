@@ -9,6 +9,12 @@ import {
   UserRejectedError,
   isMetaMaskAvailable,
 } from "@/lib/wallet-connect";
+import {
+  connectWalletConnect,
+  WalletConnectNotAvailableError,
+  WalletConnectUserRejectedError,
+  isWalletConnectAvailable,
+} from "@/lib/walletconnect";
 
 // ---------- chain helpers ----------
 const chains = ["flare", "ethereum", "polygon", "arbitrum", "optimism", "base", "solana", "bitcoin"] as const;
@@ -196,6 +202,24 @@ export default function WalletsPage() {
     }
   }, []);
 
+  const handleConnectWalletConnect = useCallback(async () => {
+    setConnectError(null);
+    try {
+      const address = await connectWalletConnect();
+      setNewWallet((p) => ({ ...p, address, connectionMethod: "walletconnect" }));
+    } catch (err) {
+      if (err instanceof WalletConnectNotAvailableError) {
+        setConnectError(err.message);
+      } else if (err instanceof WalletConnectUserRejectedError) {
+        setConnectError(err.message);
+      } else {
+        setConnectError(
+          err instanceof Error ? err.message : "Failed to connect via WalletConnect"
+        );
+      }
+    }
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -231,6 +255,23 @@ export default function WalletsPage() {
               {isMetaMaskAvailable() ? "Connect with MetaMask" : "MetaMask not detected"}
             </button>
             {newWallet.connectionMethod === "metamask" && newWallet.address && (
+              <p className="mt-2 text-xs text-green-600">
+                Connected: {newWallet.address.slice(0, 6)}...{newWallet.address.slice(-4)}
+              </p>
+            )}
+          </div>
+
+          {/* WalletConnect quick-connect */}
+          <div className="mb-4">
+            <button
+              type="button"
+              onClick={handleConnectWalletConnect}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-border-default)] bg-[var(--color-bg-secondary)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-primary)] transition hover:bg-[var(--color-bg-tertiary)]"
+            >
+              <Wallet size={16} />
+              {isWalletConnectAvailable() ? "Connect with WalletConnect" : "WalletConnect not configured"}
+            </button>
+            {newWallet.connectionMethod === "walletconnect" && newWallet.address && (
               <p className="mt-2 text-xs text-green-600">
                 Connected: {newWallet.address.slice(0, 6)}...{newWallet.address.slice(-4)}
               </p>

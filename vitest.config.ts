@@ -34,6 +34,7 @@ export default defineConfig({
       "@defi-tracker/shared": path.resolve(__dirname, "packages/shared/src"),
       "@defi-tracker/ui": path.resolve(__dirname, "packages/ui/src"),
       "@defi-tracker/config": path.resolve(__dirname, "packages/config"),
+      "@/": path.resolve(__dirname, "apps/web/src") + "/",
     },
   },
 });

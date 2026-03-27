@@ -543,6 +543,32 @@ async function processWalletSync(job: Job<WalletSyncJobData>): Promise<void> {
       error instanceof Error ? error.message : "Unknown error during wallet sync";
     console.error(`[wallet-sync] Sync failed for ${walletAddress}: ${message}`);
 
+    // Queue email notification for sync error
+    try {
+      const wallet = await prisma.wallet.findUnique({
+        where: { id: walletId },
+        include: { user: { select: { id: true, email: true } } },
+      });
+      if (wallet?.user?.email) {
+        const { addEmailJob } = await import("../index");
+        const { syncErrorEmail } = await import("@/lib/email-templates");
+        const { subject, html } = syncErrorEmail({
+          userName: wallet.user.email,
+          walletAddress: wallet.address,
+          errorMessage: error instanceof Error ? error.message : "Unknown error",
+        });
+        await addEmailJob(
+          wallet.user.email,
+          subject,
+          html,
+          wallet.user.id,
+          "SYNC_ERROR",
+        );
+      }
+    } catch (emailErr) {
+      console.warn(`[wallet-sync] Failed to queue email notification:`, emailErr);
+    }
+
     throw error; // re-throw so BullMQ marks the job as failed and can retry
   }
 }
