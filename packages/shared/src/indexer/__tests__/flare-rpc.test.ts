@@ -43,34 +43,6 @@ function httpError(status: number, statusText: string) {
   };
 }
 
-/** Build a batch JSON-RPC success response */
-function rpcBatchSuccess(results: { id: number; result: unknown }[]) {
-  return {
-    ok: true,
-    status: 200,
-    statusText: 'OK',
-    json: async () =>
-      results.map((r) => ({ jsonrpc: '2.0', id: r.id, result: r.result })),
-  };
-}
-
-/** Build a batch response with mixed results/errors */
-function rpcBatchMixed(
-  items: { id: number; result?: unknown; error?: { code: number; message: string } }[],
-) {
-  return {
-    ok: true,
-    status: 200,
-    statusText: 'OK',
-    json: async () =>
-      items.map((item) => ({
-        jsonrpc: '2.0',
-        id: item.id,
-        ...(item.error ? { error: item.error } : { result: item.result }),
-      })),
-  };
-}
-
 function makeMockLog(overrides: Partial<RpcLog> = {}): RpcLog {
   return {
     address: '0x1234567890abcdef1234567890abcdef12345678',
@@ -942,8 +914,6 @@ describe('FlareRpcClient', () => {
     it('should skip block fetch for already-cached timestamps', async () => {
       const walletAddress = '0xabcdef1234567890abcdef1234567890abcdef12';
       const txHash = '0xaaaa111122223333444455556666777788889999aaaabbbbccccddddeeeeffff';
-      const blockNum = 100;
-
       // First call: populate cache
       fetchMock
         .mockResolvedValueOnce(rpcSuccess([makeMockLog({ transactionHash: txHash, blockNumber: '0x64' })]))

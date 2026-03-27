@@ -228,7 +228,7 @@ describe('CoinTracking CSV E2E Pipeline', () => {
   // -----------------------------------------------------------------------
   it('should produce parseable CSV rows that reconstruct valid CoinTrackingRow objects', () => {
     const csv = generateCoinTrackingCsv(allRows);
-    const { headers, rows: parsedRows } = parseCsv(csv);
+    const { rows: parsedRows } = parseCsv(csv);
 
     // Reconstruct CoinTrackingRow from parsed CSV and validate
     for (let i = 0; i < parsedRows.length; i++) {

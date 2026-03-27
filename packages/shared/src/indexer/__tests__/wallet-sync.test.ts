@@ -3,7 +3,6 @@ import {
   WalletSyncService,
   createFlareSyncService,
   type SyncProgress,
-  type SyncResult,
 } from '../wallet-sync';
 import { FlareRpcClient, type FlareRpcConfig, type DecodedTransaction, type RpcLog } from '../flare-rpc';
 import * as eventDecoder from '../event-decoder';
@@ -532,7 +531,7 @@ describe('WalletSyncService', () => {
 
       let callCount = 0;
       getWalletTransactionsMock.mockImplementation(
-        async (_addr: string, _from: number, _to: number) => {
+        async () => {
           callCount++;
           if (callCount === 2) {
             throw new Error('Temporary RPC failure');

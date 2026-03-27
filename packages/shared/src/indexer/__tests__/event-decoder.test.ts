@@ -3,7 +3,6 @@ import {
   decodeLog,
   decodeTransactionLogs,
   EVENT_TOPICS,
-  type DecodedEvent,
 } from '../event-decoder';
 import type { RpcLog } from '../flare-rpc';
 
@@ -760,7 +759,7 @@ describe('Event Decoder', () => {
 
     it('should have all topics in lowercase in reverse lookup', () => {
       // Verify each topic is lowercase when used in decoding
-      for (const [sig, topic] of Object.entries(EVENT_TOPICS)) {
+      for (const [, topic] of Object.entries(EVENT_TOPICS)) {
         const log = makeMockLog({
           topics: [topic.toLowerCase()],
           data: '0x',
