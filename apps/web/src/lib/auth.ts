@@ -14,6 +14,9 @@ export const authConfig: NextAuthConfig = {
   // Required for deployment behind Coolify/Traefik reverse proxy.
   // Without this, NextAuth rejects forwarded Host headers → Configuration error.
   trustHost: true,
+  // Explicit secret: NextAuth v5 beta looks for AUTH_SECRET env var first,
+  // but Coolify/Docker may set NEXTAUTH_SECRET — support both.
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   // No adapter needed: Credentials provider + JWT strategy manages sessions
   // entirely via signed cookies — no DB session tables required.
   session: {
