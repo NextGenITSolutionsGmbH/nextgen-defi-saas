@@ -16,11 +16,15 @@
     "test:e2e": "turbo run test:e2e",
     "test:a11y": "turbo run test:a11y",
     "test:perf": "turbo run test:perf",
+    "test:mcp": "echo 'MCP tests are interactive — run via Claude Code with Playwright MCP server. See tests/mcp/run-mcp-tests.md'",
+    "test:e2e:local": "bash scripts/test-e2e.sh",
     "clean": "turbo run clean && rm -rf node_modules .turbo"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.0",
     "@playwright/test": "^1.51.1",
+    "@types/bcryptjs": "^3.0.0",
+    "bcryptjs": "^3.0.3",
     "eslint": "^9.16.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.4.0",

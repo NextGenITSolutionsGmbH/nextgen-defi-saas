@@ -1,8 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import type { User, Wallet, Transaction } from "@prisma/client";
 import { randomUUID } from "node:crypto";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+/** Default password for test users created via `createTestUser()`. */
+export const DEFAULT_TEST_PASSWORD = "TestPassword1!";
+const DEFAULT_TEST_HASH = bcrypt.hashSync(DEFAULT_TEST_PASSWORD, 10);
 
 // -------------------- Factory helpers --------------------
 
@@ -17,8 +22,7 @@ export async function createTestUser(
 ): Promise<User> {
   const {
     email = `test-${randomUUID()}@defi-tracker.test`,
-    // Pre-hashed "TestPassword1!" with Argon2id (for speed in tests)
-    passwordHash = "$argon2id$v=19$m=19456,t=2,p=1$dGVzdHNhbHQ$placeholder",
+    passwordHash = DEFAULT_TEST_HASH,
     plan = "STARTER",
   } = options;
 

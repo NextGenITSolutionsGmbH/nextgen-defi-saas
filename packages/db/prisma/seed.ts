@@ -5,6 +5,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import { randomUUID, createHash } from "node:crypto";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -72,6 +73,9 @@ function randomAddress(): string {
   return `0x${bytes}`;
 }
 
+/** Password used for all seeded users — usable in E2E tests. */
+const SEED_PASSWORD = "SeedP@ssw0rd!";
+
 // -----------  main  --------------------------------------------
 
 async function main() {
@@ -90,7 +94,7 @@ async function main() {
         create: {
           id: randomUUID(),
           email: u.email,
-          passwordHash: sha256(u.email + "seed-password"),
+          passwordHash: bcrypt.hashSync(SEED_PASSWORD, 10),
           plan: u.plan,
           totpEnabled: false,
         },

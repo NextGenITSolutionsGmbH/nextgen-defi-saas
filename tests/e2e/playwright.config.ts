@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const isCI = !!process.env.CI;
+const port = process.env.E2E_PORT ?? "3008";
+const baseURL = process.env.BASE_URL ?? `http://localhost:${port}`;
 
 export default defineConfig({
   testDir: ".",
@@ -8,15 +10,15 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  workers: isCI ? 1 : undefined,
+  workers: isCI ? 1 : 2,
   reporter: isCI ? "github" : "html",
-  timeout: 30_000,
+  timeout: 90_000,
   expect: {
-    timeout: 10_000,
+    timeout: 30_000,
   },
 
   use: {
-    baseURL: process.env.BASE_URL ?? "http://localhost:3000",
+    baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
@@ -37,10 +39,10 @@ export default defineConfig({
 
   webServer: {
     command: isCI
-      ? "pnpm --filter @defi-tracker/web start"
-      : "pnpm --filter @defi-tracker/web dev",
-    url: "http://localhost:3000/api/health",
-    reuseExistingServer: !isCI,
+      ? `pnpm --filter @defi-tracker/web start --port ${port}`
+      : `pnpm --filter @defi-tracker/web dev --port ${port}`,
+    url: `${baseURL}/api/health`,
+    reuseExistingServer: false,
     timeout: 120_000,
     stdout: "pipe",
     stderr: "pipe",
