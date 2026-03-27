@@ -43,4 +43,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "echo 'Running database migrations...' && npx prisma migrate deploy --schema packages/db/prisma/schema.prisma || echo 'Migration warning: continuing with startup' && echo 'Starting application...' && node apps/web/server.js"]
+CMD ["sh", "-c", "echo 'Running database migrations...' && npx prisma migrate deploy --schema packages/db/prisma/schema.prisma || echo 'Migration warning: continuing with startup' && echo 'Seeding database...' && npx prisma db execute --file packages/db/prisma/seed.sql --schema packages/db/prisma/schema.prisma || echo 'Seed warning: continuing' && echo 'Starting application...' && node apps/web/server.js"]
