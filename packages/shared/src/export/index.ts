@@ -14,6 +14,9 @@ export {
 
 export type { CoinTrackingRow } from './cointracking-csv';
 
+// CoinTracking XLSX Generator
+export { generateCoinTrackingXlsxBuffer } from './cointracking-xlsx';
+
 // PDF Tax Report Generator
 export { generateTaxReportHtml } from './pdf-report';
 

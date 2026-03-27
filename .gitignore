@@ -47,8 +47,11 @@ logs/
 .turbo/
 
 # Claude Code
-.claude/.credentials.json
-.claude/settings.local.json
+.claude/
 
 # Claude Code MCP server configuration (developer-specific)
 .mcp.json
+
+# Test artifacts
+playwright-report/
+test-results/

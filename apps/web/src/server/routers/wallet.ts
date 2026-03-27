@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { addWalletSyncJob } from '../queue';
+import { enforceWalletLimit, enforceMonthlyTxLimit } from "../lib/plan-limits";
 
 const addWalletSchema = z.object({
   address: z
@@ -55,6 +56,8 @@ export const walletRouter = router({
   add: protectedProcedure
     .input(addWalletSchema)
     .mutation(async ({ ctx, input }) => {
+      await enforceWalletLimit(ctx.db, ctx.user.id, ctx.user.plan);
+
       const chainId = CHAIN_ID_MAP[input.chain] ?? 1;
 
       const existing = await ctx.db.wallet.findFirst({
@@ -115,6 +118,8 @@ export const walletRouter = router({
       if (!wallet) {
         throw new Error("Wallet not found");
       }
+
+      await enforceMonthlyTxLimit(ctx.db, ctx.user.id, ctx.user.plan);
 
       // Update status to SYNCING
       await ctx.db.wallet.update({

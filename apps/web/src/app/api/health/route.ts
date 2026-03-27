@@ -1,4 +1,12 @@
 import { NextResponse } from "next/server";
+import { createRedisConnection } from "@defi-tracker/shared/queue";
+import type Redis from "ioredis";
+
+let _healthRedis: Redis | null = null;
+function getHealthRedis(): Redis {
+  if (!_healthRedis) _healthRedis = createRedisConnection();
+  return _healthRedis;
+}
 
 export async function GET() {
   const healthcheck = {
@@ -19,10 +27,12 @@ export async function GET() {
   }
 
   try {
-    // TODO: Implement Redis health check when Redis client is available
-    healthcheck.redis = "not_configured";
+    const redis = getHealthRedis();
+    const pong = await redis.ping();
+    healthcheck.redis = pong === "PONG" ? "connected" : "error";
   } catch {
     healthcheck.redis = "disconnected";
+    healthcheck.status = "degraded";
   }
 
   // Always return 200 so load balancers and deploy health checks

@@ -66,6 +66,13 @@ export interface DecodedTransaction {
 
 let rpcRequestId = 0;
 
+/** Default batch size for JSON-RPC batch requests */
+const DEFAULT_BATCH_SIZE = 20;
+
+/** Retry configuration */
+const RETRY_COUNT = 3;
+const RETRY_BASE_DELAY_MS = 1_000;
+
 async function rpcCall(
   rpcUrl: string,
   method: string,
@@ -105,8 +112,124 @@ async function rpcCall(
   }
 }
 
+/**
+ * Retry wrapper for rpcCall with exponential backoff.
+ * Retries up to RETRY_COUNT times with delays of 1s, 2s, 4s.
+ */
+async function rpcCallWithRetry(
+  rpcUrl: string,
+  method: string,
+  params: unknown[],
+  timeoutMs: number = 30_000,
+): Promise<unknown> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= RETRY_COUNT; attempt++) {
+    try {
+      return await rpcCall(rpcUrl, method, params, timeoutMs);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < RETRY_COUNT) {
+        const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/**
+ * Send a JSON-RPC batch request (multiple calls in a single HTTP POST).
+ * Processes items in sub-batches of `batchSize` to respect RPC server limits.
+ * Returns results in the same order as the input, with per-item error handling.
+ */
+async function rpcBatchCall(
+  rpcUrl: string,
+  calls: { method: string; params: unknown[] }[],
+  timeoutMs: number = 30_000,
+  batchSize: number = DEFAULT_BATCH_SIZE,
+): Promise<(unknown | Error)[]> {
+  if (calls.length === 0) return [];
+
+  const allResults: (unknown | Error)[] = new Array(calls.length);
+
+  // Process in sub-batches
+  for (let offset = 0; offset < calls.length; offset += batchSize) {
+    const batch = calls.slice(offset, offset + batchSize);
+    const startId = rpcRequestId + 1;
+    const batchPayload = batch.map((call, index) => {
+      rpcRequestId += 1;
+      return {
+        jsonrpc: '2.0' as const,
+        id: startId + index,
+        method: call.method,
+        params: call.params,
+      };
+    });
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(batchPayload),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        // Mark all items in this sub-batch as errors
+        const err = new Error(`RPC batch HTTP error: ${response.status} ${response.statusText}`);
+        for (let i = 0; i < batch.length; i++) {
+          allResults[offset + i] = err;
+        }
+        continue;
+      }
+
+      const jsonArray = (await response.json()) as Array<{
+        id: number;
+        result?: unknown;
+        error?: { code: number; message: string };
+      }>;
+
+      // Build a map from id to response for order-safe assignment
+      const responseMap = new Map<number, (typeof jsonArray)[0]>();
+      for (const item of jsonArray) {
+        responseMap.set(item.id, item);
+      }
+
+      for (let i = 0; i < batch.length; i++) {
+        const expectedId = startId + i;
+        const item = responseMap.get(expectedId);
+        if (!item) {
+          allResults[offset + i] = new Error(`Missing response for batch item id=${expectedId}`);
+        } else if (item.error) {
+          allResults[offset + i] = new Error(`RPC error: ${item.error.code} — ${item.error.message}`);
+        } else {
+          allResults[offset + i] = item.result ?? null;
+        }
+      }
+    } catch (error) {
+      // Network / abort error — mark all items in this sub-batch
+      const err = error instanceof Error ? error : new Error(String(error));
+      for (let i = 0; i < batch.length; i++) {
+        allResults[offset + i] = err;
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  return allResults;
+}
+
 export class FlareRpcClient {
   private config: FlareRpcConfig;
+
+  /** Cache of block number → Unix timestamp, shared across chunks */
+  private blockTimestampCache = new Map<number, number>();
 
   constructor(config: FlareRpcConfig = FLARE_MAINNET_CONFIG) {
     this.config = config;
@@ -114,7 +237,7 @@ export class FlareRpcClient {
 
   /** Get the latest block number */
   async getBlockNumber(): Promise<number> {
-    const result = (await rpcCall(
+    const result = (await rpcCallWithRetry(
       this.config.rpcUrl,
       'eth_blockNumber',
       [],
@@ -126,7 +249,7 @@ export class FlareRpcClient {
   /** Get block by number */
   async getBlock(blockNumber: number): Promise<RpcBlock> {
     const hex = '0x' + blockNumber.toString(16);
-    const result = await rpcCall(
+    const result = await rpcCallWithRetry(
       this.config.rpcUrl,
       'eth_getBlockByNumber',
       [hex, false],
@@ -137,13 +260,84 @@ export class FlareRpcClient {
 
   /** Get transaction receipt */
   async getTransactionReceipt(txHash: string): Promise<RpcTransactionReceipt | null> {
-    const result = await rpcCall(
+    const result = await rpcCallWithRetry(
       this.config.rpcUrl,
       'eth_getTransactionReceipt',
       [txHash],
       this.config.requestTimeoutMs,
     );
     return result as RpcTransactionReceipt | null;
+  }
+
+  /**
+   * Batch-fetch transaction receipts using JSON-RPC batch requests.
+   * Processes hashes in batches of `batchSize` (default 20).
+   * Returns results in the same order as the input hashes.
+   */
+  async getTransactionReceiptsBatch(
+    txHashes: string[],
+    batchSize: number = DEFAULT_BATCH_SIZE,
+  ): Promise<(RpcTransactionReceipt | null)[]> {
+    if (txHashes.length === 0) return [];
+
+    const calls = txHashes.map((hash) => ({
+      method: 'eth_getTransactionReceipt',
+      params: [hash] as unknown[],
+    }));
+
+    const results = await rpcBatchCall(
+      this.config.rpcUrl,
+      calls,
+      this.config.requestTimeoutMs,
+      batchSize,
+    );
+
+    return results.map((result, index) => {
+      if (result instanceof Error) {
+        console.warn(`[FlareRPC] Failed to fetch receipt for ${txHashes[index]}: ${result.message}`);
+        return null;
+      }
+      return result as RpcTransactionReceipt | null;
+    });
+  }
+
+  /**
+   * Batch-fetch blocks by number using JSON-RPC batch requests.
+   * Processes block numbers in batches of `batchSize` (default 20).
+   * Populates the block timestamp cache with fetched results.
+   */
+  async getBlocksBatch(
+    blockNumbers: number[],
+    batchSize: number = DEFAULT_BATCH_SIZE,
+  ): Promise<(RpcBlock | null)[]> {
+    if (blockNumbers.length === 0) return [];
+
+    const calls = blockNumbers.map((bn) => ({
+      method: 'eth_getBlockByNumber',
+      params: ['0x' + bn.toString(16), false] as unknown[],
+    }));
+
+    const results = await rpcBatchCall(
+      this.config.rpcUrl,
+      calls,
+      this.config.requestTimeoutMs,
+      batchSize,
+    );
+
+    return results.map((result, index) => {
+      if (result instanceof Error) {
+        console.warn(`[FlareRPC] Failed to fetch block ${blockNumbers[index]}: ${result.message}`);
+        return null;
+      }
+      const block = result as RpcBlock | null;
+      // Populate the timestamp cache
+      if (block) {
+        const bn = parseInt(block.number, 16);
+        const ts = parseInt(block.timestamp, 16);
+        this.blockTimestampCache.set(bn, ts);
+      }
+      return block;
+    });
   }
 
   /**
@@ -173,7 +367,7 @@ export class FlareRpcClient {
       if (address) filter.address = address;
       if (topics) filter.topics = topics;
 
-      const logs = (await rpcCall(
+      const logs = (await rpcCallWithRetry(
         this.config.rpcUrl,
         'eth_getLogs',
         [filter],
@@ -188,8 +382,8 @@ export class FlareRpcClient {
   }
 
   /**
-   * Fetch all transactions involving a wallet address in a block range
-   * Uses eth_getLogs to find Transfer events and other relevant events
+   * Fetch all transactions involving a wallet address in a block range.
+   * Uses batched RPC calls and a block timestamp cache for performance.
    */
   async getWalletTransactions(
     walletAddress: string,
@@ -224,37 +418,33 @@ export class FlareRpcClient {
       txHashSet.add(log.transactionHash);
     }
 
-    // Fetch full receipts for each unique transaction
+    // Batch-fetch full receipts for each unique transaction
     const txHashes = Array.from(txHashSet);
-    const receipts = await Promise.all(
-      txHashes.map((hash) => this.getTransactionReceipt(hash)),
-    );
+    const receipts = await this.getTransactionReceiptsBatch(txHashes);
 
-    // Fetch block timestamps
+    // Collect block numbers that are NOT already cached
     const blockNumbers = new Set<number>();
     for (const receipt of receipts) {
       if (receipt) {
-        blockNumbers.add(parseInt(receipt.blockNumber, 16));
+        const bn = parseInt(receipt.blockNumber, 16);
+        if (!this.blockTimestampCache.has(bn)) {
+          blockNumbers.add(bn);
+        }
       }
     }
 
-    const blockTimestamps = new Map<number, number>();
-    const blocks = await Promise.all(
-      Array.from(blockNumbers).map((bn) => this.getBlock(bn)),
-    );
-    for (const block of blocks) {
-      if (block) {
-        blockTimestamps.set(parseInt(block.number, 16), parseInt(block.timestamp, 16));
-      }
+    // Batch-fetch only uncached block timestamps
+    if (blockNumbers.size > 0) {
+      await this.getBlocksBatch(Array.from(blockNumbers));
     }
 
-    // Build decoded transactions
+    // Build decoded transactions using the cache
     const transactions: DecodedTransaction[] = [];
     for (const receipt of receipts) {
       if (!receipt) continue;
 
       const blockNum = parseInt(receipt.blockNumber, 16);
-      const timestamp = blockTimestamps.get(blockNum) ?? 0;
+      const timestamp = this.blockTimestampCache.get(blockNum) ?? 0;
 
       transactions.push({
         txHash: receipt.transactionHash,
@@ -277,7 +467,7 @@ export class FlareRpcClient {
    * Get the current chain ID to verify connection
    */
   async getChainId(): Promise<number> {
-    const result = (await rpcCall(
+    const result = (await rpcCallWithRetry(
       this.config.rpcUrl,
       'eth_chainId',
       [],

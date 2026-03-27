@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@defi-tracker/db";
 import { hashPassword } from "@/lib/auth-utils";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+/** 5 registration attempts per 15 minutes per IP */
+const REGISTER_RATE_LIMIT = 5;
+const REGISTER_WINDOW_MS = 15 * 60 * 1_000;
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -14,6 +19,26 @@ const registerSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // --- Rate limiting (per IP) ---
+    const forwarded = request.headers.get("x-forwarded-for");
+    const ip = forwarded?.split(",")[0]?.trim() ?? "unknown";
+    const rateLimit = await checkRateLimit(
+      `register:${ip}`,
+      REGISTER_RATE_LIMIT,
+      REGISTER_WINDOW_MS,
+    );
+
+    if (!rateLimit.success) {
+      const retryAfterSeconds = Math.ceil(rateLimit.resetInMs / 1_000);
+      return NextResponse.json(
+        { message: "Too many registration attempts. Please try again later." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(retryAfterSeconds) },
+        },
+      );
+    }
+
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
 

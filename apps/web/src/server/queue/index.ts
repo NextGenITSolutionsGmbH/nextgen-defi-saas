@@ -7,6 +7,7 @@ export {
   getWalletSyncQueue,
   getExportQueue,
   getPriceFetchQueue,
+  getEmailQueue,
 } from "./connection";
 
 // Workers are NOT re-exported here to avoid eager Redis connections at import
@@ -18,20 +19,23 @@ export {
   WALLET_SYNC_QUEUE,
   EXPORT_QUEUE,
   PRICE_FETCH_QUEUE,
+  EMAIL_QUEUE,
   type WalletSyncJobData,
   type ExportJobData,
   type PriceFetchJobData,
+  type EmailJobData,
 } from "@defi-tracker/shared/queue";
 
 // ---------------------------------------------------------------------------
 // Helper functions — called from tRPC routers to enqueue jobs
 // ---------------------------------------------------------------------------
 
-import { getWalletSyncQueue, getExportQueue, getPriceFetchQueue } from "./connection";
+import { getWalletSyncQueue, getExportQueue, getPriceFetchQueue, getEmailQueue } from "./connection";
 import type {
   WalletSyncJobData,
   ExportJobData,
   PriceFetchJobData,
+  EmailJobData,
 } from "@defi-tracker/shared/queue";
 
 /**
@@ -92,6 +96,28 @@ export async function addPriceFetchJob(
     { tokenSymbol, tokenAddress, chainId, timestampUnix } satisfies PriceFetchJobData,
     {
       jobId: `price-${tokenSymbol}-${chainId}-${timestampUnix}`,
+    },
+  );
+  return job.id ?? "";
+}
+
+/**
+ * Enqueue an email notification job.
+ * Called from tRPC routers or other workers when an email needs to be sent.
+ */
+export async function addEmailJob(
+  to: string,
+  subject: string,
+  html: string,
+  userId: string,
+  notificationType: EmailJobData["notificationType"],
+): Promise<string> {
+  const queue = getEmailQueue();
+  const job = await queue.add(
+    "send-email",
+    { to, subject, html, userId, notificationType } satisfies EmailJobData,
+    {
+      jobId: `email-${notificationType}-${userId}-${Date.now()}`,
     },
   );
   return job.id ?? "";

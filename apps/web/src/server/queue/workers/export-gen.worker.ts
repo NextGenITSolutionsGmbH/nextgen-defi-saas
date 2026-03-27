@@ -10,6 +10,7 @@ import {
 } from "@defi-tracker/shared/queue";
 import {
   generateCoinTrackingCsvBuffer,
+  generateCoinTrackingXlsxBuffer,
   computeFileHash,
   createExportAuditEntry,
   generateTaxReportHtml,
@@ -20,6 +21,7 @@ import {
 } from "@defi-tracker/shared";
 import { prisma } from "@defi-tracker/db";
 import { writeExportFile } from "../../../lib/storage";
+import { convertHtmlToPdf } from "../../../lib/pdf-converter";
 
 /**
  * Processes a single export-gen job:
@@ -27,7 +29,7 @@ import { writeExportFile } from "../../../lib/storage";
  * 2. Updates status to GENERATING
  * 3. Fetches all classified transactions for the user / tax year
  * 4. Maps classifications to CoinTrackingCsvRow format
- * 5. Generates file buffer (CSV / HTML for PDF)
+ * 5. Generates file buffer (CSV / PDF / XLSX)
  * 6. Computes SHA-256 file hash for GoBD integrity
  * 7. Writes file to local storage
  * 8. Creates audit log entry
@@ -136,7 +138,7 @@ async function processExportGeneration(job: Job<ExportJobData>): Promise<void> {
       }
 
       case "PDF": {
-        // Generate HTML report (PDF conversion via Puppeteer is deferred)
+        // Generate HTML report and convert to PDF via Playwright
         const reportData: TaxReportData = {
           userName: userId, // Will be replaced with actual user name lookup
           taxYear,
@@ -165,17 +167,13 @@ async function processExportGeneration(job: Job<ExportJobData>): Promise<void> {
         };
 
         const htmlContent = generateTaxReportHtml(reportData);
-        buffer = Buffer.from(htmlContent, "utf-8");
-        fileExtension = "html";
+        buffer = await convertHtmlToPdf(htmlContent);
+        fileExtension = "pdf";
         break;
       }
 
       case "XLSX": {
-        // XLSX generation is not yet implemented — fall back to CSV buffer
-        console.warn(
-          `[export-gen] XLSX format not yet implemented for export ${exportId}, generating CSV instead`,
-        );
-        buffer = generateCoinTrackingCsvBuffer(rows);
+        buffer = await generateCoinTrackingXlsxBuffer(rows);
         fileExtension = "xlsx";
         break;
       }
@@ -241,6 +239,32 @@ async function processExportGeneration(job: Job<ExportJobData>): Promise<void> {
     console.log(
       `[export-gen] Export ${exportId} completed: ${rowCount} rows, format=${format}, method=${method}`,
     );
+
+    // 10. Queue email notification for completed export
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+      if (user?.email) {
+        const { addEmailJob } = await import("../index");
+        const { exportCompletedEmail } = await import("@/lib/email-templates");
+        const { subject, html } = exportCompletedEmail({
+          userName: user.email,
+          taxYear,
+          format,
+        });
+        await addEmailJob(
+          user.email,
+          subject,
+          html,
+          userId,
+          "EXPORT_COMPLETE",
+        );
+      }
+    } catch (emailErr) {
+      console.warn(`[export-gen] Failed to queue email notification:`, emailErr);
+    }
   } catch (error) {
     // Error handling — set status to FAILED
     await prisma.export.update({
