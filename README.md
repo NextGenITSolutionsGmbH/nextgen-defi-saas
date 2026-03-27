@@ -21,6 +21,7 @@ Built by [NextGen IT Solutions GmbH](https://nextgenitsolutions.de), Stuttgart.
 - [Database Schema](#database-schema)
 - [Getting Started](#getting-started)
 - [Environment Variables](#environment-variables)
+- [Test Users](#test-users)
 - [Scripts](#scripts)
 - [Testing](#testing)
 - [CI/CD Pipeline](#cicd-pipeline)
@@ -95,7 +96,7 @@ DeFi Tracker SaaS solves the tax reporting problem for Flare Network DeFi users 
 | **Database** | PostgreSQL 16 + Prisma ORM v6 |
 | **Queue** | Redis 7 + BullMQ v5 (wallet-sync, price-fetch, export-gen) |
 | **Auth** | NextAuth.js v5 + TOTP 2FA + bcryptjs password hashing |
-| **Monorepo** | pnpm workspaces + Turborepo |
+| **Monorepo** | pnpm 9.15.4 workspaces + Turborepo |
 | **Language** | TypeScript 5.7+ (strict mode) |
 | **Testing** | Playwright (E2E + a11y), Vitest (unit + integration), k6 (perf) |
 | **CI/CD** | GitHub Actions (4 self-hosted runners) + Docker + Coolify |
@@ -136,7 +137,7 @@ nextgen-defi-saas/
 │   ├── ui/                           # shadcn/ui component library
 │   └── config/                       # Shared TypeScript config
 ├── docker/
-│   ├── Dockerfile                    # Multi-stage production (Node 24 Alpine)
+│   ├── Dockerfile                    # Multi-stage production (Node 24.14.1 Alpine)
 │   ├── Dockerfile.dev                # Development with hot-reload
 │   ├── docker-compose.yml            # Full dev stack (PostgreSQL + Redis + app)
 │   └── docker-compose.test.yml       # Ephemeral test databases (tmpfs)
@@ -306,8 +307,29 @@ Copy `.env.example` to `.env`:
 | `CMC_API_KEY` | CoinMarketCap API (tier 3 pricing) | No |
 | `STRIPE_SECRET_KEY` | Stripe payment key | No |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing | No |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (client-side) | No |
 | `COOLIFY_API_URL` | Coolify instance URL (deploy only) | No |
 | `COOLIFY_API_TOKEN` | Coolify API token (deploy only) | No |
+
+---
+
+## Test Users
+
+The production seed (`packages/db/prisma/seed.sql`) creates three test accounts. The seed is idempotent and runs automatically on container startup via the Dockerfile.
+
+| Email | Password | Plan Tier |
+|-------|----------|-----------|
+| `alice@example.com` | `SeedP@ssw0rd!` | STARTER |
+| `bob@example.com` | `SeedP@ssw0rd!` | PRO |
+| `carol@example.com` | `SeedP@ssw0rd!` | BUSINESS |
+
+All test users have TOTP 2FA disabled. Passwords are hashed with bcrypt. The seed uses `ON CONFLICT (email) DO NOTHING` so it is safe to run repeatedly.
+
+To seed manually:
+
+```bash
+pnpm --filter @defi-tracker/db db:seed
+```
 
 ---
 
@@ -401,7 +423,7 @@ Triggers on push to `main`/`develop` and pull requests:
 
 1. Start PostgreSQL 16 + Redis 7 service containers
 2. Install dependencies (`pnpm install --frozen-lockfile`)
-3. Generate Prisma client + run migrations
+3. Generate Prisma client
 4. Lint (ESLint) + Type check (`tsc --noEmit`)
 5. Unit tests (Vitest with coverage)
 6. Integration tests (real DB/Redis)
@@ -427,6 +449,14 @@ Triggers on push to `main` or manual dispatch:
 5. Health check validation (`GET /api/health`, 20 retries)
 6. Post deployment summary
 
+### Performance (`performance.yml`)
+
+Triggers weekly (Monday 3am UTC) or manual dispatch:
+
+1. Install k6
+2. Run smoke tests against target URL
+3. Upload results as artifacts (30-day retention)
+
 ---
 
 ## Deployment
@@ -436,22 +466,23 @@ Triggers on push to `main` or manual dispatch:
 ```
 GitHub (push to main)
     > GitHub Actions (self-hosted)
-        > Docker build (Node 24 Alpine, multi-stage)
+        > Docker build (Node 24.14.1 Alpine, multi-stage)
             > Push to ghcr.io
                 > Coolify deploy webhook
                     > Auto-migrate DB (prisma migrate deploy)
-                        > Start app (node apps/web/server.js)
-                            > Health check (/api/health)
-                                > Live at app.defi.nextgenitsolutions.de
+                        > Auto-seed DB (prisma db execute seed.sql)
+                            > Start app (node apps/web/server.js)
+                                > Health check (/api/health)
+                                    > Live at app.defi.nextgenitsolutions.de
 ```
 
 ### Docker Image
 
 Production Dockerfile (`docker/Dockerfile`):
 
-1. **Build stage:** Node 24 Alpine, pnpm install, Prisma generate, Turbo build (standalone)
+1. **Build stage:** Node 24.14.1 Alpine, pnpm install, Prisma generate, Turbo build (standalone)
 2. **Run stage:** Copy standalone + static + Prisma migrations, run as non-root (UID 1001)
-3. **Startup:** `prisma migrate deploy` then `node apps/web/server.js`
+3. **Startup:** `prisma migrate deploy`, then `prisma db execute seed.sql`, then `node apps/web/server.js`
 
 ### Health Check
 
@@ -479,7 +510,7 @@ GET /api/health  =>  200 OK
 | **Registry** | GitHub Container Registry (ghcr.io) |
 | **CI Runners** | 4x self-hosted GitHub Actions runners via Coolify |
 | **Database** | PostgreSQL 16 Alpine (Coolify managed) |
-| **Cache/Queue** | Redis 7.2 Alpine (Coolify managed) |
+| **Cache/Queue** | Redis 7 Alpine (Coolify managed) |
 | **SSL** | Automatic via Coolify (Let's Encrypt) |
 
 ---
@@ -490,7 +521,7 @@ GET /api/health  =>  200 OK
 
 | Rule | Implementation |
 |------|---------------|
-| **FIFO/LIFO** | Configurable lot matching per user |
+| **FIFO/LIFO/HIFO** | Configurable lot matching per user |
 | **Haltefrist** (365 days) | Per-lot countdown, auto-detected tax-free disposals |
 | **§23 EStG Freigrenze** | Private sales exemption (1,000/year) |
 | **§22 Nr. 3 EStG** | Other income exemption (256/year) for staking/lending |

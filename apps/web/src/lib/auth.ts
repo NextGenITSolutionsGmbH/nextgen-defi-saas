@@ -11,6 +11,9 @@ const credentialsSchema = z.object({
 });
 
 export const authConfig: NextAuthConfig = {
+  // Required for deployment behind Coolify/Traefik reverse proxy.
+  // Without this, NextAuth rejects forwarded Host headers → Configuration error.
+  trustHost: true,
   // No adapter needed: Credentials provider + JWT strategy manages sessions
   // entirely via signed cookies — no DB session tables required.
   session: {
@@ -20,6 +23,7 @@ export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login",
     newUser: "/register",
+    error: "/error",
   },
   providers: [
     CredentialsProvider({
@@ -77,19 +81,6 @@ export const authConfig: NextAuthConfig = {
         (session.user as { plan?: string }).plan = token.plan as string;
       }
       return session;
-    },
-    async authorized({ auth, request }) {
-      const isLoggedIn = !!auth?.user;
-      const { pathname } = request.nextUrl;
-
-      const publicPaths = ["/", "/login", "/register"];
-      const isPublicPath =
-        publicPaths.includes(pathname) ||
-        pathname.startsWith("/api/auth") ||
-        pathname.startsWith("/api/health");
-
-      if (isPublicPath) return true;
-      return isLoggedIn;
     },
   },
 };
