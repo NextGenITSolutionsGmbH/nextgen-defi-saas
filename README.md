@@ -65,15 +65,15 @@ DeFi Tracker SaaS solves the tax reporting problem for Flare Network DeFi users 
                +--------v--------+                      +---------v--------+
                |  PostgreSQL 16  |                      |     Redis 7      |
                |   (Prisma v6)   |                      |    (BullMQ v5)   |
-               |   12 models     |                      |    3 workers     |
+               |   13 models     |                      |    4 workers     |
                +--------+--------+                      +---------+--------+
                         |                                         |
-                        |                    +--------------------+--------------------+
-                        |                    |                    |                    |
-                        |           +--------v------+   +--------v------+   +---------v-----+
-                        |           | wallet-sync   |   | price-fetch   |   | export-gen    |
-                        |           | (Flare RPC)   |   | (FTSO/CG/CMC) |   | (CSV/PDF)     |
-                        |           +---------------+   +---------------+   +---------------+
+                        |                    +--------------------+--------------------+--------------------+
+                        |                    |                    |                    |                    |
+                        |           +--------v------+   +--------v------+   +---------v-----+   +--------v-------+
+                        |           | wallet-sync   |   | price-fetch   |   | export-gen    |   | email-send     |
+                        |           | (Flare RPC)   |   | (FTSO/CG/CMC) |   | (CSV/XLSX/PDF)|   | (Resend)       |
+                        |           +---------------+   +---------------+   +---------------+   +----------------+
                         |
            +------------+------------+
            |            |            |
@@ -94,8 +94,12 @@ DeFi Tracker SaaS solves the tax reporting problem for Flare Network DeFi users 
 | **Frontend** | Next.js 15 (App Router), React 19, Tailwind CSS + PostCSS, shadcn/ui |
 | **API** | tRPC 11 + Zod validation (end-to-end type safety) |
 | **Database** | PostgreSQL 16 + Prisma ORM v6 |
-| **Queue** | Redis 7 + BullMQ v5 (wallet-sync, price-fetch, export-gen) |
+| **Queue** | Redis 7 + BullMQ v5 (wallet-sync, price-fetch, export-gen, email-send) |
+| **Payments** | Stripe (subscriptions, webhooks, plan management) |
 | **Auth** | NextAuth.js v5 + TOTP 2FA + bcryptjs password hashing |
+| **Email** | Resend (transactional email service) |
+| **Wallet** | WalletConnect v2 (dApp wallet connection) |
+| **Export** | ExcelJS (XLSX generation), jsPDF (PDF reports) |
 | **Monorepo** | pnpm 9.15.4 workspaces + Turborepo |
 | **Language** | TypeScript 5.7+ (strict mode) |
 | **Testing** | Playwright (E2E + a11y), Vitest (unit + integration), k6 (perf) |
@@ -205,6 +209,24 @@ nextgen-defi-saas/
 - SHA-256 hash chain on `audit_logs`, versioned exports
 - PDF reports for tax advisor handoff
 
+### 6. Payment & Billing (`apps/web/src/app/api/webhooks/stripe/`)
+
+- Stripe subscription management with plan tiers (STARTER/PRO/BUSINESS/KANZLEI)
+- Webhook handler for subscription lifecycle events
+- Plan-based feature limits (wallets, exports, API calls per tier)
+
+### 7. Notification System (`apps/web/src/server/routers/notification.ts`)
+
+- User notification preferences (export complete, sync errors, tax reminders)
+- Email delivery via Resend with branded HTML templates
+- BullMQ email-send worker for async delivery
+
+### 8. Security & Rate Limiting (`apps/web/src/lib/rate-limit.ts`)
+
+- Redis-backed sliding window rate limiter
+- Per-endpoint and per-user rate limit configuration
+- WalletConnect v2 integration for secure wallet connections
+
 ---
 
 ## Supported Protocols
@@ -223,7 +245,7 @@ nextgen-defi-saas/
 
 ## Database Schema
 
-12 models, 12 enums — PostgreSQL 16 via Prisma v6:
+13 models, 12 enums — PostgreSQL 16 via Prisma v6:
 
 ```
 User ──< Wallet ──< Transaction ──< TxLeg
@@ -232,6 +254,7 @@ User ──< Wallet ──< Transaction ──< TxLeg
   ├──< TaxLot ──< TaxEvent
   ├──< Export
   ├──< Subscription
+  ├──< NotificationPreference
   └──< AuditLog
 
 PriceAuditLog (standalone — GoBD compliance)
@@ -308,6 +331,12 @@ Copy `.env.example` to `.env`:
 | `STRIPE_SECRET_KEY` | Stripe payment key | No |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing | No |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (client-side) | No |
+| `RESEND_API_KEY` | Resend email service API key | No |
+| `EMAIL_FROM` | Sender email address | No |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | WalletConnect project ID | No |
+| `STRIPE_PRICE_PRO` | Stripe Pro plan price ID | No |
+| `STRIPE_PRICE_BUSINESS` | Stripe Business plan price ID | No |
+| `STRIPE_PRICE_KANZLEI` | Stripe Kanzlei plan price ID | No |
 | `COOLIFY_API_URL` | Coolify instance URL (deploy only) | No |
 | `COOLIFY_API_TOKEN` | Coolify API token (deploy only) | No |
 
@@ -377,12 +406,16 @@ Coverage thresholds: 80% (statements, branches, functions, lines).
 
 ### E2E Tests (Playwright)
 
-10 specs across 2 browser projects (chromium + mobile-chrome = 20 test runs):
+27 specs across 2 browser projects (chromium + mobile-chrome = 54 test runs):
 
 | Suite | Tests | Description |
 |-------|-------|-------------|
 | `health.spec.ts` | 2 | Health endpoint status + timestamp |
 | `auth.spec.ts` | 5 | Register, login, invalid credentials, protected routes |
+| `exports.spec.ts` | 4 | CSV/XLSX export generation and download |
+| `settings.spec.ts` | 5 | User settings, notification preferences, plan management |
+| `transactions.spec.ts` | 4 | Transaction list, filtering, classification display |
+| `wallets.spec.ts` | 4 | Wallet add/remove, sync status, WalletConnect |
 | `a11y.spec.ts` | 3 | WCAG 2.1 AA compliance (login, register, wallets) |
 
 **Run locally** (recommended — starts Docker, migrates DB, seeds, runs tests):
@@ -555,9 +588,9 @@ GET /api/health  =>  200 OK
 |-------|--------|-------------|
 | **Phase 0** | Done | Project setup, monorepo, CI/CD, infrastructure |
 | **Phase 1** | Done | Core pipeline (indexer, pricing, classifier, tax engine, export, dashboard) |
-| **Phase 2** | Next | Beta testing, wallet connect, real-time sync, notifications |
+| **Phase 2** | Beta | Stripe billing, WalletConnect, email notifications, rate limiting, XLSX export, plan-based limits, comprehensive test suite |
 | **Phase 3** | Planned | Multi-chain support, ML classification, Steuerberater portal |
-| **Phase 4** | Planned | SaaS launch, Stripe billing, onboarding flow |
+| **Phase 4** | Planned | SaaS launch, onboarding flow, marketing site |
 
 ---
 
