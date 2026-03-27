@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { execSync } from "child_process";
 import path from "path";
 
-const BUILD_ID = "ba2fe23-entrypoint";
+const BUILD_ID = "f1486bc-abspath";
+const APP_ROOT = "/app";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -16,14 +17,14 @@ export async function GET(request: Request) {
     try {
       // Try multiple possible paths for Prisma CLI
       const schemaPaths = [
+        path.join(APP_ROOT, "packages/db/prisma/schema.prisma"),
         "packages/db/prisma/schema.prisma",
-        path.join(process.cwd(), "packages/db/prisma/schema.prisma"),
       ];
 
       const cliPaths = [
+        `node ${path.join(APP_ROOT, "node_modules/prisma/build/index.js")}`,
         "node node_modules/prisma/build/index.js",
         "npx prisma",
-        "node_modules/.bin/prisma",
       ];
 
       let migrated = false;
@@ -35,6 +36,7 @@ export async function GET(request: Request) {
             const output = execSync(cmd, {
               timeout: 30000,
               encoding: "utf-8",
+              cwd: APP_ROOT,
               env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
             });
             checks.migrate_result = output.trim().slice(0, 500);
@@ -51,10 +53,10 @@ export async function GET(request: Request) {
       // Also try seeding
       if (migrated) {
         try {
-          const seedOutput = execSync(
-            `node node_modules/prisma/build/index.js db execute --file packages/db/prisma/seed.sql --schema packages/db/prisma/schema.prisma`,
-            { timeout: 15000, encoding: "utf-8", env: process.env as NodeJS.ProcessEnv }
-          );
+          const seedCmd = `node ${path.join(APP_ROOT, "node_modules/prisma/build/index.js")} db execute --file ${path.join(APP_ROOT, "packages/db/prisma/seed.sql")} --schema ${path.join(APP_ROOT, "packages/db/prisma/schema.prisma")}`;
+          const seedOutput = execSync(seedCmd, {
+            timeout: 15000, encoding: "utf-8", cwd: APP_ROOT, env: process.env as NodeJS.ProcessEnv,
+          });
           checks.seed_result = seedOutput.trim().slice(0, 200);
         } catch (e) {
           checks.seed_error = e instanceof Error ? e.message.slice(0, 200) : String(e).slice(0, 200);
@@ -79,11 +81,11 @@ export async function GET(request: Request) {
   // Check what files exist
   try {
     const fs = await import("fs");
-    checks.entrypoint_exists = fs.existsSync("entrypoint.sh") ? "yes" : "no";
-    checks.prisma_schema_exists = fs.existsSync("packages/db/prisma/schema.prisma") ? "yes" : "no";
-    checks.prisma_cli_exists = fs.existsSync("node_modules/prisma/build/index.js") ? "yes" : "no";
-    checks.seed_sql_exists = fs.existsSync("packages/db/prisma/seed.sql") ? "yes" : "no";
-    checks.migrations_dir = fs.existsSync("packages/db/prisma/migrations") ? "yes" : "no";
+    checks.entrypoint_exists = fs.existsSync(path.join(APP_ROOT, "entrypoint.sh")) ? "yes" : "no";
+    checks.prisma_schema_exists = fs.existsSync(path.join(APP_ROOT, "packages/db/prisma/schema.prisma")) ? "yes" : "no";
+    checks.prisma_cli_exists = fs.existsSync(path.join(APP_ROOT, "node_modules/prisma/build/index.js")) ? "yes" : "no";
+    checks.seed_sql_exists = fs.existsSync(path.join(APP_ROOT, "packages/db/prisma/seed.sql")) ? "yes" : "no";
+    checks.migrations_dir = fs.existsSync(path.join(APP_ROOT, "packages/db/prisma/migrations")) ? "yes" : "no";
   } catch (e) {
     checks.fs_error = e instanceof Error ? e.message : String(e);
   }
