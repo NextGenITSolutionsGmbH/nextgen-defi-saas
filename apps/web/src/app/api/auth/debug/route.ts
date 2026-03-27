@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import path from "path";
 
-const BUILD_ID = "f1486bc-abspath";
+const BUILD_ID = "e0fc944-instrumentation";
 const APP_ROOT = "/app";
 
 export async function GET(request: Request) {
