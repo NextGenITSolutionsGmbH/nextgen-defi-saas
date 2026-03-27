@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { execSync } from "child_process";
 import path from "path";
 
 const BUILD_ID = "f1486bc-abspath";
