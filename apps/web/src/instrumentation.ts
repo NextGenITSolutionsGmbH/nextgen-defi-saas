@@ -26,10 +26,15 @@ export async function register() {
     }
 
     const sql = fs.readFileSync(sqlPath, "utf-8");
-    const statements = sql
+    // Strip SQL comment lines, then split by semicolons
+    const cleanedSql = sql
+      .split("\n")
+      .filter((line: string) => !line.trim().startsWith("--"))
+      .join("\n");
+    const statements = cleanedSql
       .split(";")
       .map((s: string) => s.trim())
-      .filter((s: string) => s.length > 0 && !s.startsWith("--"));
+      .filter((s: string) => s.length > 0);
 
     let executed = 0;
     for (const stmt of statements) {
