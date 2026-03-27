@@ -12,55 +12,66 @@ export async function GET(request: Request) {
 
   checks.build_id = BUILD_ID;
 
-  // Action: run migrations via Prisma's programmatic API
+  // Action: run migrations via Prisma $executeRawUnsafe (bypasses broken CLI)
   if (action === "migrate") {
     try {
-      // Try multiple possible paths for Prisma CLI
-      const schemaPaths = [
-        path.join(APP_ROOT, "packages/db/prisma/schema.prisma"),
-        "packages/db/prisma/schema.prisma",
-      ];
+      const fs = await import("fs");
+      const { prisma } = await import("@defi-tracker/db");
 
-      const cliPaths = [
-        `node ${path.join(APP_ROOT, "node_modules/prisma/build/index.js")}`,
-        "node node_modules/prisma/build/index.js",
-        "npx prisma",
-      ];
+      // Step 1: Run migration SQL
+      const migrationPath = path.join(APP_ROOT, "packages/db/prisma/migrations/0001_init/migration.sql");
+      if (fs.existsSync(migrationPath)) {
+        const migrationSql = fs.readFileSync(migrationPath, "utf-8");
+        // Split by statements and execute each (skip empty)
+        const statements = migrationSql
+          .split(";")
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 0 && !s.startsWith("--"));
 
-      let migrated = false;
-      for (const cli of cliPaths) {
-        for (const schema of schemaPaths) {
+        checks.statements_found = String(statements.length);
+        let executed = 0;
+        const errors: string[] = [];
+        for (const stmt of statements) {
           try {
-            const cmd = `${cli} migrate deploy --schema ${schema}`;
-            checks[`try_${cli.replace(/[^a-z]/g, "_")}`] = cmd;
-            const output = execSync(cmd, {
-              timeout: 30000,
-              encoding: "utf-8",
-              cwd: APP_ROOT,
-              env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
-            });
-            checks.migrate_result = output.trim().slice(0, 500);
-            migrated = true;
-            break;
+            await prisma.$executeRawUnsafe(stmt);
+            executed++;
           } catch (e) {
-            checks[`error_${cli.replace(/[^a-z]/g, "_")}`] =
-              e instanceof Error ? e.message.slice(0, 200) : String(e).slice(0, 200);
+            const msg = e instanceof Error ? e.message : String(e);
+            if (msg.includes("already exists")) {
+              executed++; // Already migrated
+            } else {
+              errors.push(msg.slice(0, 100));
+            }
           }
         }
-        if (migrated) break;
+        checks.statements_executed = String(executed);
+        if (errors.length > 0) checks.migration_errors = errors.join(" | ").slice(0, 500);
+      } else {
+        checks.migration_file = "not found";
       }
 
-      // Also try seeding
-      if (migrated) {
+      // Step 2: Run seed SQL
+      const seedPath = path.join(APP_ROOT, "packages/db/prisma/seed.sql");
+      if (fs.existsSync(seedPath)) {
+        const seedSql = fs.readFileSync(seedPath, "utf-8");
         try {
-          const seedCmd = `node ${path.join(APP_ROOT, "node_modules/prisma/build/index.js")} db execute --file ${path.join(APP_ROOT, "packages/db/prisma/seed.sql")} --schema ${path.join(APP_ROOT, "packages/db/prisma/schema.prisma")}`;
-          const seedOutput = execSync(seedCmd, {
-            timeout: 15000, encoding: "utf-8", cwd: APP_ROOT, env: process.env as NodeJS.ProcessEnv,
-          });
-          checks.seed_result = seedOutput.trim().slice(0, 200);
+          await prisma.$executeRawUnsafe(seedSql);
+          checks.seed = "ok";
         } catch (e) {
           checks.seed_error = e instanceof Error ? e.message.slice(0, 200) : String(e).slice(0, 200);
         }
+      }
+
+      // Step 3: Verify user exists
+      try {
+        const user = await prisma.user.findUnique({
+          where: { email: "carol@example.com" },
+          select: { id: true, email: true, plan: true },
+        });
+        checks.carol_exists = user ? "yes" : "no";
+        checks.carol_plan = user?.plan ?? "n/a";
+      } catch (e) {
+        checks.verify_error = e instanceof Error ? e.message.slice(0, 200) : String(e).slice(0, 200);
       }
 
       return NextResponse.json(checks);
