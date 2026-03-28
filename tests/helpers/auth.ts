@@ -52,7 +52,7 @@ export async function registerTestUser(
     await confirmField.fill(creds.password);
   }
 
-  await page.getByRole("button", { name: /register|sign up/i }).click();
+  await page.getByRole("button", { name: /register|sign up|create account/i }).click();
 
   await page.waitForURL((url) => !url.pathname.includes("/register"), {
     timeout: 10_000,
