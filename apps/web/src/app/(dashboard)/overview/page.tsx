@@ -60,17 +60,17 @@ export default function DashboardPage() {
         />
         <KpiCard
           icon={<ShieldCheck size={20} />}
-          title={"\u00A723 Freigrenze"}
-          value="\u20AC582.40"
-          change={{ value: "-\u20AC17.60", trend: "down" }}
-          subtitle="of \u20AC600 annual limit"
+          title="§23 Freigrenze"
+          value="€582.40"
+          change={{ value: "-€17.60", trend: "down" }}
+          subtitle="of €600 annual limit"
         />
         <KpiCard
           icon={<Coins size={20} />}
-          title={"\u00A722 Freigrenze"}
-          value="\u20AC256.00"
-          change={{ value: "+\u20AC48.00", trend: "up" }}
-          subtitle="of \u20AC256 annual limit (Staking)"
+          title="§22 Freigrenze"
+          value="€256.00"
+          change={{ value: "+€48.00", trend: "up" }}
+          subtitle="of €256 annual limit (Staking)"
         />
       </div>
 
@@ -128,7 +128,7 @@ export default function DashboardPage() {
                 trend:
                   (portfolio?.taxableGains ?? 0) > 1000 ? "down" : "up",
               }}
-              subtitle="Holding period \u2264 365 days"
+              subtitle={"Holding period \u2264 365 days"}
             />
             <KpiCard
               icon={<Shield size={20} />}

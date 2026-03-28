@@ -11,12 +11,13 @@ echo "=== DeFi Tracker SaaS — Production Startup ==="
 echo "Working directory: $(pwd)"
 echo "APP_ROOT: ${APP_ROOT}"
 
-# Step 1: Run database migrations
+# Step 1: Run database migrations (MUST succeed — schema mismatch causes 500s)
 echo "[1/3] Running database migrations..."
 if $PRISMA_CLI migrate deploy --schema "$SCHEMA"; then
   echo "[1/3] Migrations applied successfully."
 else
-  echo "[1/3] WARNING: Migration failed — tables may not exist!"
+  echo "[1/3] ERROR: Migration failed — aborting startup to prevent schema mismatch!"
+  exit 1
 fi
 
 # Step 2: Seed database (idempotent — ON CONFLICT DO NOTHING)

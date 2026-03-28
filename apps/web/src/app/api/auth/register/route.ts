@@ -70,6 +70,13 @@ export async function POST(request: NextRequest) {
       data: {
         email: normalizedEmail,
         passwordHash,
+        notificationPrefs: {
+          create: {
+            exportComplete: false,
+            syncError: false,
+            taxReminder: false,
+          },
+        },
       },
     });
 
