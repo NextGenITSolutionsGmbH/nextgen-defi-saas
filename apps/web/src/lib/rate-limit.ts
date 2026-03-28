@@ -158,6 +158,9 @@ async function checkRedisRateLimit(
  * Uses a Redis sorted-set sliding window when Redis is available, and falls
  * back to an in-memory Map<string, number[]> otherwise.
  *
+ * In test environments (NODE_ENV=test), rate limiting is bypassed to avoid
+ * blocking E2E and integration test suites that share a single IP.
+ *
  * @param key          Unique identifier (e.g. `register:${ip}`)
  * @param maxRequests  Maximum number of requests allowed within the window
  * @param windowMs     Sliding window duration in milliseconds
@@ -167,6 +170,11 @@ export async function checkRateLimit(
   maxRequests: number,
   windowMs: number,
 ): Promise<RateLimitResult> {
+  // Bypass rate limiting in test environments
+  if (process.env.NODE_ENV === "test") {
+    return { success: true, remaining: maxRequests, resetInMs: windowMs };
+  }
+
   const redis = getRedis();
 
   if (!redis) {

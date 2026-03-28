@@ -48,7 +48,7 @@ test.describe("Dashboard page [US-006, EP-08]", () => {
     await expect(page.getByText("§22 Freigrenze")).toBeVisible();
 
     // Verify KPI values are present
-    await expect(page.getByText("1,248")).toBeVisible();
+    await expect(page.getByText("1,248", { exact: true })).toBeVisible();
     await expect(page.getByText("94.2%")).toBeVisible();
   });
 
