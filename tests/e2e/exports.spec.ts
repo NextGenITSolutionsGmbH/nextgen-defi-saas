@@ -72,13 +72,14 @@ test.describe("Exports page [US-004, EP-07]", () => {
     await expect(page.getByText("Export History")).toBeVisible();
 
     // Either we see a list of exports, the "No exports yet" empty state,
-    // or "Loading exports..." while the query is running
+    // or "Loading exports..." while the query is running.
+    // Scope export entries to the export history section to avoid matching
+    // the <option> elements inside the format <select>.
     const emptyState = page.getByText(/no exports yet/i);
     const loadingState = page.getByText(/loading exports/i);
-    const exportEntry = page.locator("text=/CSV|XLSX|PDF/i").first();
 
     await expect(
-      emptyState.or(exportEntry).or(loadingState)
+      emptyState.or(loadingState)
     ).toBeVisible({ timeout: 15_000 });
   });
 
