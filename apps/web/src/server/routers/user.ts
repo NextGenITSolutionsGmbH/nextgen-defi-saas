@@ -8,6 +8,8 @@ import {
   verifyTOTP,
 } from "@/lib/auth-utils";
 import { stripe, STRIPE_PRICE_IDS } from "@/lib/stripe";
+import { encrypt, decrypt } from "@/lib/crypto";
+import { invalidateCache } from "../lib/cache";
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -109,6 +111,8 @@ export const userRouter = router({
         select: { id: true, plan: true },
       });
 
+      await invalidateCache(ctx.user.id, ["user.*"]);
+
       return updated;
     }),
 
@@ -192,10 +196,10 @@ export const userRouter = router({
 
     const { secret, otpauthUrl } = generateTOTPSecret();
 
-    // Store the secret temporarily (not yet enabled until verified)
+    // Store the secret temporarily (encrypted at rest, not yet enabled until verified)
     await ctx.db.user.update({
       where: { id: ctx.user.id },
-      data: { totpSecret: secret },
+      data: { totpSecret: encrypt(secret) },
     });
 
     return setup2faOutputSchema.parse({ secret, otpauthUrl });
@@ -230,8 +234,11 @@ export const userRouter = router({
         });
       }
 
+      // Decrypt the stored secret before verification
+      const decryptedSecret = decrypt(user.totpSecret);
+
       // Verify the token against the stored secret
-      const isValid = verifyTOTP(input.token, user.totpSecret);
+      const isValid = verifyTOTP(input.token, decryptedSecret);
       if (!isValid) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -269,7 +276,10 @@ export const userRouter = router({
         });
       }
 
-      const isValid = verifyTOTP(input.token, user.totpSecret);
+      // Decrypt the stored secret before verification
+      const decryptedSecret = decrypt(user.totpSecret);
+
+      const isValid = verifyTOTP(input.token, decryptedSecret);
       if (!isValid) {
         throw new TRPCError({
           code: "BAD_REQUEST",

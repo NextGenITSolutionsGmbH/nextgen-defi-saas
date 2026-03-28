@@ -18,4 +18,8 @@ process.env.NEXTAUTH_SECRET =
 process.env.NEXTAUTH_URL =
   process.env.NEXTAUTH_URL ?? "http://localhost:3008";
 
+process.env.TOTP_ENCRYPTION_KEY =
+  process.env.TOTP_ENCRYPTION_KEY ??
+  "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
 process.env.NODE_ENV = "test";
