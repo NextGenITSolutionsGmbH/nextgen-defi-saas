@@ -12,6 +12,7 @@ if [ -f "$PROJECT_ROOT/.env.test" ]; then
   set +a
 fi
 export NODE_ENV=test
+export RATE_LIMIT_DISABLED=true
 
 # --- Parse flags ---
 CLEANUP=false

@@ -158,8 +158,11 @@ async function checkRedisRateLimit(
  * Uses a Redis sorted-set sliding window when Redis is available, and falls
  * back to an in-memory Map<string, number[]> otherwise.
  *
- * In test environments (NODE_ENV=test), rate limiting is bypassed to avoid
- * blocking E2E and integration test suites that share a single IP.
+ * In test/E2E environments, rate limiting is bypassed to avoid blocking test
+ * suites that share a single IP. We check RATE_LIMIT_DISABLED (a custom env
+ * var) because process.env.NODE_ENV is inlined at build time by Next.js/webpack
+ * as "production", which makes a NODE_ENV==="test" check dead code in the
+ * production bundle used by `next start` during E2E runs.
  *
  * @param key          Unique identifier (e.g. `register:${ip}`)
  * @param maxRequests  Maximum number of requests allowed within the window
@@ -170,8 +173,14 @@ export async function checkRateLimit(
   maxRequests: number,
   windowMs: number,
 ): Promise<RateLimitResult> {
-  // Bypass rate limiting in test environments
-  if (process.env.NODE_ENV === "test") {
+  // Bypass rate limiting in test/E2E environments.
+  // NOTE: process.env.NODE_ENV is inlined at build time by Next.js as
+  // "production", so we also check RATE_LIMIT_DISABLED which is a real
+  // runtime env var not subject to webpack DefinePlugin substitution.
+  if (
+    process.env.NODE_ENV === "test" ||
+    process.env.RATE_LIMIT_DISABLED === "true"
+  ) {
     return { success: true, remaining: maxRequests, resetInMs: windowMs };
   }
 
