@@ -22,7 +22,7 @@ jobs:
   e2e:
     name: E2E & Accessibility
     runs-on: [self-hosted, linux, x64]
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Start service containers
