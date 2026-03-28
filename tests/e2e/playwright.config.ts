@@ -29,10 +29,14 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
-    {
-      name: "mobile-chrome",
-      use: { ...devices["Pixel 5"] },
-    },
+    ...(process.env.CI_FULL !== "false"
+      ? [
+          {
+            name: "mobile-chrome",
+            use: { ...devices["Pixel 5"] },
+          },
+        ]
+      : []),
   ],
 
   globalSetup: "./global-setup.ts",

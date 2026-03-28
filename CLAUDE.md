@@ -6,12 +6,15 @@ BMF-2025-compliant, automated CoinTracking CSV export.
 Built by NextGen IT Solutions GmbH, Stuttgart.
 
 ## Architecture & Stack
+- **Runtime**: Node.js >= 24 (24.14.1 LTS)
 - **Monorepo**: pnpm workspaces + Turborepo
 - **Frontend**: Next.js 15 App Router + React 19 + Tailwind CSS + shadcn/ui
-- **Backend API**: tRPC 11 + Zod validation (type-safe end-to-end)
+- **Backend API**: tRPC 11 (RC) + Zod validation (type-safe end-to-end)
 - **Database**: PostgreSQL 16 + Prisma ORM v6
 - **Queue**: Redis 7 + BullMQ v5 (async indexing, export jobs, sync workers)
-- **Auth**: NextAuth.js v5 + TOTP 2FA
+- **Auth**: NextAuth.js v5 (beta) + TOTP 2FA (otplib)
+- **Billing**: Stripe (STARTER / PRO / BUSINESS / KANZLEI plans)
+- **Email**: Resend (transactional email delivery)
 - **Hosting**: Hetzner self-hosted runners (4x) via Coolify
 - **CI/CD**: GitHub Actions → Coolify deployment
 - **Domain**: app.defi.nextgenitsolutions.de (GoDaddy DNS → Hetzner)
@@ -23,6 +26,13 @@ packages/db/            — Prisma schema, client, seed
 packages/shared/        — Types, constants, ABIs, tax rules
 packages/ui/            — shadcn/ui component library
 packages/config/        — Shared TS config
+docker/                 — Dockerfile, docker-compose (dev + test)
+tests/e2e/              — Playwright E2E specs (7 specs × 2 browsers)
+tests/k6/               — k6 performance tests
+tests/mcp/              — MCP interactive test playbook
+scripts/                — test-e2e.sh, check-spec-refs.sh
+.github/workflows/      — CI, E2E, Deploy, Performance, Spec Coverage
+docs/                   — Traceability matrix
 ```
 
 ## Agent Orchestration Strategy — Maximum Parallelism
@@ -50,45 +60,68 @@ Claude Code MUST maximize parallel sub-agent spawning for peak code delivery:
 - **Code review**: Spawn explore agents to analyze different areas concurrently
 - **Deployment**: Background agents for build + deploy while continuing development
 
-### Wave Execution Example
+## Key Subsystems
+
+| Subsystem | Location | Notes |
+|-----------|----------|-------|
+| Blockchain Indexer | `packages/shared/src/indexer/` | Flare RPC chain 14, BullMQ `wallet-sync` job |
+| EUR Price Engine | `packages/shared/src/pricing/` | 4-tier: FTSO → CoinGecko → CMC → Manual |
+| TX Classification | `packages/shared/src/classifier/` | 5-layer rules, Ampel GREEN/YELLOW/RED/GRAY |
+| Tax Engine | `packages/shared/src/tax/` | FIFO (default) + LIFO + HIFO lot matching |
+| Export Engine | `packages/shared/src/export/` | CSV, XLSX, PDF — all three formats |
+| Stripe Billing | `apps/web/src/app/api/webhooks/stripe/` | STARTER/PRO/BUSINESS/KANZLEI plans |
+| Notifications | `apps/web/src/server/queue/workers/` | BullMQ email-send worker, Resend integration |
+| Rate Limiting | `apps/web/src/lib/rate-limit.ts` | Redis sliding window, per-endpoint + per-user |
+| Auth & 2FA | `apps/web/src/lib/auth-utils.ts` | NextAuth v5 beta, TOTP via otplib, bcryptjs |
+| tRPC API | `apps/web/src/server/routers/` | 6 routers: user, wallet, transaction, export, dashboard, notification |
+
+## Testing Infrastructure
+
+| Layer | Tool | Trigger | Location |
+|-------|------|---------|----------|
+| Unit | Vitest | `ci.yml` (push/PR) | `packages/*/src/**/__tests__/` |
+| Integration | Vitest + real DB | `ci.yml` (push/PR) | `apps/web/src/server/**/__tests__/` |
+| E2E | Playwright (Chromium + Pixel 5) | `e2e.yml` (push main + PRs) | `tests/e2e/*.spec.ts` |
+| Accessibility | axe-core + Playwright | `e2e.yml` | `tests/e2e/a11y.spec.ts` |
+| Performance | k6 | `performance.yml` (weekly) | `tests/k6/` |
+| Interactive | Playwright MCP Server | Manual via Claude Code | `tests/mcp/run-mcp-tests.md` |
+
+- **Coverage target**: 80% (statements, branches, functions, lines)
+- **Spec-driven**: `@spec` JSDoc tags link code to PRD requirement IDs (see `CONTRIBUTING.md`)
+
+## MCP Servers
+
+Configured in `.mcp.json` (git-ignored, developer-local):
+- **Playwright**: `@playwright/mcp` — headless Chromium, 1280x720 viewport
+- **Postgres**: `@modelcontextprotocol/server-postgres` — direct DB queries via `DATABASE_URL`
+
+Claude Code agents **MUST** run Playwright MCP smoke tests before requesting deployment:
+1. Follow Quick Smoke Test in `tests/mcp/run-mcp-tests.md` (5 min)
+2. For major features, run full 8-phase MCP test suite (15-20 min)
+
+## CI/CD Pipeline
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `ci.yml` | push main/develop + PRs | Lint, type-check, unit + integration tests, security audit |
+| `e2e.yml` | push main + PRs (path-filtered) | Playwright E2E + accessibility tests |
+| `deploy.yml` | push main | Docker → GHCR → Coolify (gates on CI + E2E pass) |
+| `performance.yml` | weekly Mon 3am | k6 smoke/load/DB perf tests |
+| `spec-coverage.yml` | PRs | @spec tag coverage report (80% target) |
+
+## Quick Reference
+
+```bash
+pnpm dev                            # Start dev server (Turbopack)
+pnpm build                          # Production build
+pnpm turbo lint                     # ESLint
+pnpm turbo type-check               # TypeScript check
+pnpm turbo test:unit                # Unit tests (Vitest)
+pnpm turbo test:integration         # Integration tests (needs DB + Redis)
+pnpm test:e2e:local                 # Playwright E2E with Docker setup
+pnpm --filter @defi-tracker/db exec prisma studio   # DB browser
+pnpm --filter @defi-tracker/db exec prisma migrate dev  # New migration
 ```
-Wave 1 (Foundation):  shared types + queue infra + DB migrations    → 3 parallel agents
-Wave 2 (Services):    indexer + price engine + classifier + tax calc → 4 parallel agents
-Wave 3 (Integration): tRPC routers + export engine + audit service  → 3 parallel agents
-Wave 4 (Frontend):    dashboard + TX list + wallet UI + settings    → 4 parallel agents
-Wave 5 (Polish):      tests + CI/CD + Docker + build verification   → 3 parallel agents
-```
-
-## Core Business Modules
-
-### 1. Blockchain Indexer (`packages/shared/src/indexer/`)
-- Flare RPC (chain ID 14) via JSON-RPC + The Graph subgraph fallback
-- ABI event decoding: SparkDEX V3/V4, Ēnosys DEX+CDP, Kinetic Market
-- BullMQ job: `sync-wallet` → fetch TX logs → decode → store
-
-### 2. EUR Price Engine (`packages/shared/src/pricing/`)
-- 4-tier priority: FTSO (on-chain) → CoinGecko → CMC → Manual
-- Every price logged to `price_audit_logs` (GoBD compliance)
-- Z-Score anomaly detection (>3σ = warning)
-
-### 3. TX Classification Engine (`packages/shared/src/classifier/`)
-- 5-layer rules: Protocol ABI match → Event pattern → Heuristic → ML fallback → Manual
-- Maps to CoinTracking types: Trade, Staking, LP Rewards, Lending Einnahme, etc.
-- Ampel system: GREEN (auto-classified) / YELLOW (Graubereich) / RED (unknown) / GRAY (irrelevant)
-- Dual-scenario (Model A/B) for LP providing and CDP
-
-### 4. Tax Calculation Engine (`packages/shared/src/tax/`)
-- FIFO (default) + LIFO lot matching
-- § 23 EStG Freigrenze monitor (€1,000/year)
-- § 22 Nr. 3 EStG Freigrenze monitor (€256/year)
-- Haltefrist tracker (1-year countdown per lot)
-- Gain/Loss computation per disposal
-
-### 5. CoinTracking Export Engine (`packages/shared/src/export/`)
-- 15-column CSV: Type, Buy/Sell Amount/Currency, Fee, Exchange, Date, Tx-ID, EUR values
-- Date format: DD.MM.YYYY HH:MM:SS (UTC)
-- Decimal separator: comma (DE format)
-- GoBD: SHA-256 hash chain on audit_logs, versioned exports
 
 ## Development Conventions
 - **Language**: Code, commits, PRs, and documentation in English
@@ -98,6 +131,9 @@ Wave 5 (Polish):      tests + CI/CD + Docker + build verification   → 3 parall
 - **Branching**: GitFlow — main, develop, feature/*, hotfix/*, release/*
 - **Chain**: Flare Network (chain ID 14) is the primary and only MVP chain
 - **Wallet addresses**: Always lowercase, 0x-prefixed, 42 chars
+- **Spec tags**: Use `@spec FR-xx-xx` / `US-xxx` / `NFR-xxx` JSDoc tags in tests (see `CONTRIBUTING.md`)
+- **Coverage**: Minimum 80% (statements, branches, functions, lines)
+- **Node.js**: Requires Node >= 24 (see `.nvmrc`)
 
 ## Flare Network Constants
 - **Chain ID**: 14 (mainnet), 114 (Coston2 testnet)
@@ -123,3 +159,6 @@ Wave 5 (Polish):      tests + CI/CD + Docker + build verification   → 3 parall
 - [datasource/DeFiTracker_PRD_v2.md](datasource/DeFiTracker_PRD_v2.md) — Product Requirements Document
 - [datasource/DeFi_Tracker_Komplett_v10_NextGen.md](datasource/DeFi_Tracker_Komplett_v10_NextGen.md) — Full Technical Analysis
 - [datasource/DeFiTracker_BrandBook_KOMPLETT_v1.md](datasource/DeFiTracker_BrandBook_KOMPLETT_v1.md) — Brand Guidelines
+- [README.md](README.md) — Full project documentation, getting started, env vars
+- [CONTRIBUTING.md](CONTRIBUTING.md) — Spec-driven development workflow
+- [docs/traceability-matrix.md](docs/traceability-matrix.md) — Requirement-to-code mapping

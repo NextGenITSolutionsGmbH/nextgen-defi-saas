@@ -58,11 +58,51 @@ jobs:
             }
             throw new Error('Timed out waiting for CI check');
 
+  e2e-check:
+    name: Wait for E2E
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 50
+    steps:
+      - name: Wait for E2E workflow to succeed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.sha;
+            const checkName = 'E2E & Accessibility';
+            const maxAttempts = 120;
+            const interval = 15000;
+
+            for (let i = 0; i < maxAttempts; i++) {
+              const { data } = await github.rest.checks.listForRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: sha,
+                check_name: checkName,
+              });
+
+              const check = data.check_runs[0];
+              if (check) {
+                console.log(`Attempt ${i + 1}: ${check.name} — status=${check.status}, conclusion=${check.conclusion}`);
+                if (check.status === 'completed') {
+                  if (check.conclusion === 'success') {
+                    console.log('E2E check passed!');
+                    return;
+                  }
+                  throw new Error(`E2E check failed with conclusion: ${check.conclusion}`);
+                }
+              } else {
+                console.log(`Attempt ${i + 1}: Check "${checkName}" not found yet...`);
+              }
+
+              await new Promise(r => setTimeout(r, interval));
+            }
+            throw new Error('Timed out waiting for E2E check');
+
   deploy:
     name: Deploy to Production
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
-    needs: ci-check
+    needs: [ci-check, e2e-check]
 
     steps:
       - name: Checkout repository

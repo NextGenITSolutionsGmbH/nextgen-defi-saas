@@ -3,6 +3,16 @@ name: E2E Tests
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'apps/web/**'
+      - 'packages/ui/**'
+      - 'packages/shared/**'
+      - 'packages/db/prisma/**'
+      - 'tests/e2e/**'
+      - 'tests/helpers/**'
+      - 'pnpm-lock.yaml'
 
 concurrency:
   group: e2e-${{ github.ref }}
@@ -104,6 +114,7 @@ jobs:
         run: npx playwright test --config tests/e2e/playwright.config.ts
         env:
           CI: 'true'
+          CI_FULL: ${{ github.event_name == 'push' && 'true' || 'false' }}
 
       - name: Upload Playwright report
         if: always()
