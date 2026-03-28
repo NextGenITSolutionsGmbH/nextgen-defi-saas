@@ -1,7 +1,13 @@
-import { auth } from "@/lib/auth";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth.config";
 import { NextResponse } from "next/server";
 
 const publicPaths = new Set(["/", "/login", "/register", "/error"]);
+
+// Use the Edge-compatible auth config (no Prisma/Redis/bcrypt imports).
+// The full provider config in auth.ts is Node.js-only and must not be
+// imported here — middleware runs in the Edge Runtime.
+const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
