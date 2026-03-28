@@ -154,28 +154,25 @@ test.describe("Dashboard page [US-006, EP-08]", () => {
     // Verify we are on the wallets page
     await expect(page).toHaveURL(/\/wallets/);
 
-    // On desktop, the sidebar should be visible with the Dashboard link.
-    // The sidebar links Dashboard to "/" — click it to navigate.
-    const sidebar = page.locator("aside[role='navigation']");
-    const dashboardLink = sidebar.getByText("Dashboard");
+    // On mobile viewports, the sidebar is translated off-screen and requires
+    // clicking the hamburger toggle first. Try the mobile toggle first.
+    const menuToggle = page.getByRole("button", {
+      name: /open navigation/i,
+    });
 
-    // On mobile viewports, the sidebar may be hidden behind a toggle.
-    // If not visible, open the mobile menu first.
-    if (!(await dashboardLink.isVisible())) {
-      const menuToggle = page.getByRole("button", {
-        name: /open navigation/i,
-      });
-      if (await menuToggle.isVisible()) {
-        await menuToggle.click();
-        await expect(dashboardLink).toBeVisible();
-      }
+    if (await menuToggle.isVisible()) {
+      await menuToggle.click();
+      // Wait for the sidebar slide-in animation
+      await page.waitForTimeout(300);
     }
 
+    // Now the sidebar should be visible with the Dashboard link
+    const sidebar = page.locator("aside[role='navigation']");
+    const dashboardLink = sidebar.getByText("Dashboard");
+    await expect(dashboardLink).toBeVisible({ timeout: 5_000 });
     await dashboardLink.click();
 
     // After clicking Dashboard, we should land on the root or overview page.
-    // Verify by checking for the Dashboard heading on the resulting page.
-    // The sidebar href is "/" which may redirect — we just verify the heading loads.
     await page.waitForLoadState("networkidle");
 
     // We may end up at "/" or "/overview" depending on routing config.

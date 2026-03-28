@@ -43,7 +43,7 @@ test.describe("Wallets page [US-001, EP-01]", () => {
 
   test("add wallet via manual address input", async ({ page }) => {
     // Click the "Add Wallet" button to reveal the form
-    await page.getByRole("button", { name: /add wallet/i }).click();
+    await page.getByRole("button", { name: /add wallet/i }).first().click();
 
     // The form should be visible
     await expect(page.getByText("Add New Wallet")).toBeVisible();
@@ -57,7 +57,7 @@ test.describe("Wallets page [US-001, EP-01]", () => {
     await labelInput.fill("E2E Test Wallet");
 
     // Submit the form — use the submit button inside the form (not the top-level Add Wallet button)
-    const submitButton = page.getByRole("button", { name: /^add wallet$/i });
+    const submitButton = page.locator("form").getByRole("button", { name: /add wallet/i });
     await submitButton.click();
 
     // Wait for the wallet to appear in the list
@@ -71,10 +71,10 @@ test.describe("Wallets page [US-001, EP-01]", () => {
 
   test("adding a duplicate wallet shows an error", async ({ page }) => {
     // First, add a wallet
-    await page.getByRole("button", { name: /add wallet/i }).click();
+    await page.getByRole("button", { name: /add wallet/i }).first().click();
     await page.getByPlaceholder("0x...").fill(VALID_FLARE_ADDRESS);
     await page.getByPlaceholder("My main wallet").fill("First Wallet");
-    await page.getByRole("button", { name: /^add wallet$/i }).click();
+    await page.locator("form").getByRole("button", { name: /add wallet/i }).click();
 
     // Wait for it to appear
     await expect(page.getByText("First Wallet")).toBeVisible({
@@ -82,9 +82,9 @@ test.describe("Wallets page [US-001, EP-01]", () => {
     });
 
     // Try to add the same address again
-    await page.getByRole("button", { name: /add wallet/i }).click();
+    await page.getByRole("button", { name: /add wallet/i }).first().click();
     await page.getByPlaceholder("0x...").fill(VALID_FLARE_ADDRESS);
-    await page.getByRole("button", { name: /^add wallet$/i }).click();
+    await page.locator("form").getByRole("button", { name: /add wallet/i }).click();
 
     // Should see an error message (e.g., "already exists", "duplicate", etc.)
     const errorMessage = page.locator("text=/already|duplicate|exists|error/i");
@@ -93,10 +93,10 @@ test.describe("Wallets page [US-001, EP-01]", () => {
 
   test("wallet list shows chain badge", async ({ page }) => {
     // Add a wallet with default chain (Flare)
-    await page.getByRole("button", { name: /add wallet/i }).click();
+    await page.getByRole("button", { name: /add wallet/i }).first().click();
     await page.getByPlaceholder("0x...").fill(SECOND_FLARE_ADDRESS);
     await page.getByPlaceholder("My main wallet").fill("Chain Badge Wallet");
-    await page.getByRole("button", { name: /^add wallet$/i }).click();
+    await page.locator("form").getByRole("button", { name: /add wallet/i }).click();
 
     // Wait for the wallet card to appear
     await expect(page.getByText("Chain Badge Wallet")).toBeVisible({
@@ -109,10 +109,10 @@ test.describe("Wallets page [US-001, EP-01]", () => {
 
   test("remove wallet disappears from list", async ({ page }) => {
     // Add a wallet first
-    await page.getByRole("button", { name: /add wallet/i }).click();
+    await page.getByRole("button", { name: /add wallet/i }).first().click();
     await page.getByPlaceholder("0x...").fill(SECOND_FLARE_ADDRESS);
     await page.getByPlaceholder("My main wallet").fill("To Be Removed");
-    await page.getByRole("button", { name: /^add wallet$/i }).click();
+    await page.locator("form").getByRole("button", { name: /add wallet/i }).click();
 
     await expect(page.getByText("To Be Removed")).toBeVisible({
       timeout: 15_000,
@@ -140,13 +140,13 @@ test.describe("Wallets page [US-001, EP-01]", () => {
     await page.goto("/wallets");
     await page.waitForLoadState("networkidle");
 
-    // The page heading should still be visible
+    // The page heading should still be visible (use exact to avoid matching "No wallets yet")
     await expect(
-      page.getByRole("heading", { name: /wallets/i })
+      page.getByRole("heading", { name: "Wallets", exact: true })
     ).toBeVisible();
 
     // The "Add Wallet" button should be accessible
-    const addButton = page.getByRole("button", { name: /add wallet/i });
+    const addButton = page.getByRole("button", { name: /add wallet/i }).first();
     await expect(addButton).toBeVisible();
 
     // Click to open the form — it should fit within the mobile viewport

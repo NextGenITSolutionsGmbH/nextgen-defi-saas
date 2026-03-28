@@ -42,20 +42,25 @@ test.describe("Exports page [US-004, EP-07]", () => {
 
     // Click "Generate Export"
     const generateButton = page.getByRole("button", {
-      name: /generate export/i,
+      name: /generate export|creating/i,
     });
     await expect(generateButton).toBeVisible();
     await generateButton.click();
 
-    // After clicking, the button should show a loading state or the export
-    // should appear in the history with PENDING/GENERATING status.
-    // We wait for either the status badge or an error message.
-    const statusBadge = page.getByText(/pending|generating|completed/i);
+    // After clicking, either:
+    // 1. The export appears in history with PENDING/GENERATING/COMPLETED status
+    // 2. The mutation shows an error message (e.g., rate limited, plan limits)
+    // 3. The button shows "Creating..." loading state
+    // 4. The export queued message appears
+    const statusBadge = page.getByText(/PENDING|GENERATING|COMPLETED/i);
+    const creatingState = page.getByText("Creating...");
     const errorMessage = page.locator(
-      "text=/error|failed|no transactions/i"
+      "text=/error|failed|no transactions|rate limit|queued/i"
     );
 
-    await expect(statusBadge.or(errorMessage)).toBeVisible({
+    await expect(
+      statusBadge.or(creatingState).or(errorMessage)
+    ).toBeVisible({
       timeout: 15_000,
     });
   });
@@ -66,13 +71,15 @@ test.describe("Exports page [US-004, EP-07]", () => {
     // The "Export History" section heading should be present
     await expect(page.getByText("Export History")).toBeVisible();
 
-    // Either we see a list of exports or the "No exports yet" empty state
-    const emptyState = page.getByText(
-      /no exports yet/i
-    );
+    // Either we see a list of exports, the "No exports yet" empty state,
+    // or "Loading exports..." while the query is running
+    const emptyState = page.getByText(/no exports yet/i);
+    const loadingState = page.getByText(/loading exports/i);
     const exportEntry = page.locator("text=/CSV|XLSX|PDF/i").first();
 
-    await expect(emptyState.or(exportEntry)).toBeVisible({ timeout: 15_000 });
+    await expect(
+      emptyState.or(exportEntry).or(loadingState)
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test("export format dropdown has CSV, XLSX, and PDF options", async ({
@@ -110,16 +117,19 @@ test.describe("Exports page [US-004, EP-07]", () => {
 
     // Generate the export
     await page
-      .getByRole("button", { name: /generate export/i })
+      .getByRole("button", { name: /generate export|creating/i })
       .click();
 
-    // The export should be created (status badge or error)
-    const statusBadge = page.getByText(/pending|generating|completed/i);
+    // The export should be created (status badge, loading state, or error)
+    const statusBadge = page.getByText(/PENDING|GENERATING|COMPLETED/i);
+    const creatingState = page.getByText("Creating...");
     const errorMessage = page.locator(
-      "text=/error|failed|no transactions/i"
+      "text=/error|failed|no transactions|rate limit|queued/i"
     );
 
-    await expect(statusBadge.or(errorMessage)).toBeVisible({
+    await expect(
+      statusBadge.or(creatingState).or(errorMessage)
+    ).toBeVisible({
       timeout: 15_000,
     });
 

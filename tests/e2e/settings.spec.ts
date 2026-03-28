@@ -40,8 +40,8 @@ test.describe("Settings page [EP-08]", () => {
     await expect(page.getByText("Email")).toBeVisible();
     await expect(page.getByText(creds.email)).toBeVisible();
 
-    // Plan label should be visible
-    await expect(page.getByText("Plan")).toBeVisible();
+    // Plan label should be visible (use exact to avoid matching "Aktueller Plan" button)
+    await expect(page.getByText("Plan", { exact: true })).toBeVisible();
 
     // "Mitglied seit" (Member since) label
     await expect(page.getByText("Mitglied seit")).toBeVisible();
@@ -56,7 +56,7 @@ test.describe("Settings page [EP-08]", () => {
     await expect(planBadge).toBeVisible({ timeout: 15_000 });
 
     // Plan options section (Steuereinstellungen / Tax Settings) should be present
-    await expect(page.getByText("Steuereinstellungen")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Steuereinstellungen" })).toBeVisible();
 
     // Verify FIFO is the default tax method
     const fifoRadio = page.locator("input[name='taxMethod'][value='FIFO']");
@@ -65,7 +65,7 @@ test.describe("Settings page [EP-08]", () => {
 
   test("2FA setup flow shows QR generation step", async ({ page }) => {
     // Security section heading
-    await expect(page.getByText("Sicherheit")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Sicherheit" })).toBeVisible();
 
     // 2FA label should be visible
     await expect(
@@ -108,13 +108,13 @@ test.describe("Settings page [EP-08]", () => {
     // The "Passwort ändern" label should be visible
     await expect(page.getByText("Passwort ändern")).toBeVisible();
 
-    // Click the expand/chevron button next to password change
-    // It is a button with a ChevronRight icon in the security section
-    const expandButton = page
-      .locator("div")
-      .filter({ hasText: /Passwort ändern/ })
-      .locator("button")
-      .first();
+    // Click the expand/chevron button next to password change.
+    // The button is a sibling of the text container within the password section.
+    // Use a tighter scope: the border-t div that contains "Passwort ändern"
+    const passwordSection = page
+      .locator("div.border-t")
+      .filter({ hasText: /Passwort ändern/ });
+    const expandButton = passwordSection.getByRole("button").first();
     await expandButton.click();
 
     // The password form fields should now be visible

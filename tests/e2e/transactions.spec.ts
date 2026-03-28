@@ -63,11 +63,12 @@ test.describe("Transactions page [US-002, EP-06, EP-09]", () => {
     await expect(allChip).toBeVisible();
 
     // Each Ampel status chip should be present
+    // Note: parentheses must be escaped in RegExp for literal matching
     const statusChips = [
-      "Green (auto)",
-      "Yellow (Graubereich)",
-      "Red (manual needed)",
-      "Gray (irrelevant)",
+      "Green \\(auto\\)",
+      "Yellow \\(Graubereich\\)",
+      "Red \\(manual needed\\)",
+      "Gray \\(irrelevant\\)",
     ];
 
     for (const label of statusChips) {
@@ -115,14 +116,21 @@ test.describe("Transactions page [US-002, EP-06, EP-09]", () => {
       /transactions will appear here once your wallets are synced/i
     );
 
-    // Either the empty state is shown, or we have data from seed — both are acceptable.
-    // We verify the structure is rendered properly.
-    const tableOrEmpty = emptyState.or(page.locator("tbody tr").first());
-    await expect(tableOrEmpty).toBeVisible({ timeout: 15_000 });
+    // Wait for the page to finish loading (either data rows or empty state)
+    // Use the tbody to detect that the table has rendered
+    await page.waitForLoadState("networkidle");
 
-    // If empty state is shown, the help text should also be present
-    if (await emptyState.isVisible()) {
+    // Either the empty state is shown, or we have data from seed — both are acceptable.
+    // Check for data rows (with actual content, not the empty state row) or the empty state.
+    const hasDataRows = await page.locator("tbody tr").count() > 1;
+
+    if (!hasDataRows) {
+      // Empty state should be visible
+      await expect(emptyState).toBeVisible({ timeout: 15_000 });
       await expect(helpText).toBeVisible();
+    } else {
+      // Data rows are present — verify at least one row is visible
+      await expect(page.locator("tbody tr").first()).toBeVisible();
     }
   });
 
