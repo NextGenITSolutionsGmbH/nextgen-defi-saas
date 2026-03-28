@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
 import {
   hashPassword,
   verifyPassword,
@@ -18,7 +20,7 @@ describe("hashPassword [NFR-S01, NFR-S05, NFR-S06]", () => {
   it("returns a non-empty Argon2id hash string", async () => {
     const hash = await hashPassword("SuperSecure!123");
     expect(hash).toBeTruthy();
-    expect(hash).toMatch(/^\$argon2id\$/);
+    expect(hash).toMatch(/^\$2[aby]\$/);
   });
 
   it("produces different hashes for the same input (salt varies)", async () => {

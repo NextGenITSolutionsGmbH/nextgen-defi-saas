@@ -1,4 +1,5 @@
 import { initTRPC, TRPCError } from "@trpc/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import { auth } from "@/lib/auth";
 import { prisma } from "@defi-tracker/db";
@@ -54,3 +55,27 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     },
   });
 });
+
+/**
+ * Creates a protected procedure with per-user rate limiting.
+ * @param actionName  Unique name for rate limit key (e.g. "wallet.sync")
+ * @param maxRequests Maximum requests allowed in window
+ * @param windowMs    Sliding window duration in milliseconds
+ */
+export function createRateLimitedProcedure(
+  actionName: string,
+  maxRequests: number,
+  windowMs: number,
+) {
+  return protectedProcedure.use(async ({ ctx, next }) => {
+    const key = `trpc:${actionName}:${ctx.user.id}`;
+    const result = await checkRateLimit(key, maxRequests, windowMs);
+    if (!result.success) {
+      throw new TRPCError({
+        code: "TOO_MANY_REQUESTS",
+        message: `Rate limit exceeded. Try again in ${Math.ceil(result.resetInMs / 1000)} seconds.`,
+      });
+    }
+    return next();
+  });
+}
