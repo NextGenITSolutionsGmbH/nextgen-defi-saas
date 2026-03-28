@@ -165,6 +165,7 @@ export const userRouter = router({
       await ctx.db.user.update({
         where: { id: ctx.user.id },
         data: { passwordHash: newHash },
+        select: { id: true },
       });
 
       return { success: true };
@@ -200,6 +201,7 @@ export const userRouter = router({
     await ctx.db.user.update({
       where: { id: ctx.user.id },
       data: { totpSecret: encrypt(secret) },
+      select: { id: true },
     });
 
     return setup2faOutputSchema.parse({ secret, otpauthUrl });
@@ -249,6 +251,7 @@ export const userRouter = router({
       await ctx.db.user.update({
         where: { id: ctx.user.id },
         data: { totpEnabled: true },
+        select: { id: true },
       });
 
       return { success: true, message: "Two-factor authentication enabled" };
@@ -290,6 +293,7 @@ export const userRouter = router({
       await ctx.db.user.update({
         where: { id: ctx.user.id },
         data: { totpEnabled: false, totpSecret: null },
+        select: { id: true },
       });
 
       return { success: true, message: "Two-factor authentication disabled" };
@@ -466,6 +470,7 @@ export const userRouter = router({
       // tax_lots, exports, subscriptions
       await ctx.db.user.delete({
         where: { id: ctx.user.id },
+        select: { id: true },
       });
 
       return {
@@ -502,6 +507,7 @@ export const userRouter = router({
         await ctx.db.user.update({
           where: { id: user.id },
           data: { stripeCustomerId: customerId },
+          select: { id: true },
         });
       }
 

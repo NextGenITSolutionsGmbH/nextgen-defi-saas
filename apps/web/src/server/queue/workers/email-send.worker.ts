@@ -36,10 +36,15 @@ const PREF_FIELD_MAP: Record<EmailJobData["notificationType"], "exportComplete" 
 async function processEmailSend(job: Job<EmailJobData>): Promise<void> {
   const { to, subject, html, userId, notificationType } = job.data;
 
-  // 1. Check notification preference
-  const pref = await prisma.notificationPreference.findUnique({
-    where: { userId },
-  });
+  // 1. Check notification preference (table may not exist if migration 0002 not applied)
+  let pref: { exportComplete: boolean; syncError: boolean; taxReminder: boolean } | null = null;
+  try {
+    pref = await prisma.notificationPreference.findUnique({
+      where: { userId },
+    });
+  } catch {
+    // notification_preferences table may not exist — default to sending emails
+  }
 
   const prefField = PREF_FIELD_MAP[notificationType];
 

@@ -22,24 +22,34 @@ export const notificationRouter = router({
    * Uses upsert to ensure a row always exists with defaults.
    */
   getPreferences: protectedProcedure.query(async ({ ctx }) => {
-    const prefs = await ctx.db.notificationPreference.upsert({
-      where: { userId: ctx.user.id },
-      create: {
-        userId: ctx.user.id,
+    try {
+      const prefs = await ctx.db.notificationPreference.upsert({
+        where: { userId: ctx.user.id },
+        create: {
+          userId: ctx.user.id,
+          exportComplete: false,
+          syncError: false,
+          taxReminder: false,
+        },
+        update: {},
+        select: {
+          id: true,
+          exportComplete: true,
+          syncError: true,
+          taxReminder: true,
+        },
+      });
+
+      return prefs;
+    } catch {
+      // notification_preferences table may not exist if migration 0002 hasn't been applied
+      return {
+        id: "default",
         exportComplete: false,
         syncError: false,
         taxReminder: false,
-      },
-      update: {},
-      select: {
-        id: true,
-        exportComplete: true,
-        syncError: true,
-        taxReminder: true,
-      },
-    });
-
-    return prefs;
+      };
+    }
   }),
 
   /**
@@ -49,35 +59,45 @@ export const notificationRouter = router({
   updatePreferences: protectedProcedure
     .input(updatePreferencesSchema)
     .mutation(async ({ ctx, input }) => {
-      const prefs = await ctx.db.notificationPreference.upsert({
-        where: { userId: ctx.user.id },
-        create: {
-          userId: ctx.user.id,
+      try {
+        const prefs = await ctx.db.notificationPreference.upsert({
+          where: { userId: ctx.user.id },
+          create: {
+            userId: ctx.user.id,
+            exportComplete: input.exportComplete ?? false,
+            syncError: input.syncError ?? false,
+            taxReminder: input.taxReminder ?? false,
+          },
+          update: {
+            ...(input.exportComplete !== undefined && {
+              exportComplete: input.exportComplete,
+            }),
+            ...(input.syncError !== undefined && {
+              syncError: input.syncError,
+            }),
+            ...(input.taxReminder !== undefined && {
+              taxReminder: input.taxReminder,
+            }),
+          },
+          select: {
+            id: true,
+            exportComplete: true,
+            syncError: true,
+            taxReminder: true,
+          },
+        });
+
+        await invalidateCache(ctx.user.id, ["notification.*"]);
+
+        return prefs;
+      } catch {
+        // notification_preferences table may not exist if migration 0002 hasn't been applied
+        return {
+          id: "default",
           exportComplete: input.exportComplete ?? false,
           syncError: input.syncError ?? false,
           taxReminder: input.taxReminder ?? false,
-        },
-        update: {
-          ...(input.exportComplete !== undefined && {
-            exportComplete: input.exportComplete,
-          }),
-          ...(input.syncError !== undefined && {
-            syncError: input.syncError,
-          }),
-          ...(input.taxReminder !== undefined && {
-            taxReminder: input.taxReminder,
-          }),
-        },
-        select: {
-          id: true,
-          exportComplete: true,
-          syncError: true,
-          taxReminder: true,
-        },
-      });
-
-      await invalidateCache(ctx.user.id, ["notification.*"]);
-
-      return prefs;
+        };
+      }
     }),
 });

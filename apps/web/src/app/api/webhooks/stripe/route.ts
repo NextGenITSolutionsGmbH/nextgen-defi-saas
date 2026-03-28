@@ -77,6 +77,7 @@ async function handleCheckoutSessionCompleted(
   await prisma.user.update({
     where: { id: user.id },
     data: { plan },
+    select: { id: true },
   });
 }
 
@@ -126,6 +127,7 @@ async function handleSubscriptionUpdated(sub: Stripe.Subscription) {
   await prisma.user.update({
     where: { id: existing.userId },
     data: { plan },
+    select: { id: true },
   });
 }
 
@@ -148,6 +150,7 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription) {
   await prisma.user.update({
     where: { id: existing.userId },
     data: { plan: "STARTER" },
+    select: { id: true },
   });
 }
 

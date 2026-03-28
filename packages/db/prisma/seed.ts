@@ -98,6 +98,7 @@ async function main() {
           plan: u.plan,
           totpEnabled: false,
         },
+        select: { id: true, email: true, plan: true },
       }),
     ),
   );
