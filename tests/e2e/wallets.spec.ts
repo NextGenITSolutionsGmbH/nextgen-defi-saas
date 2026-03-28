@@ -6,9 +6,12 @@ import { loginAsTestUser, registerTestUser } from "../helpers/auth";
  *
  * Covers the wallet CRUD lifecycle: empty state, add via manual input,
  * duplicate detection, chain badge display, removal, and mobile layout.
+ *
+ * @spec US-001 — Wallet management
+ * @spec EP-01 — Wallet sync and management UI
  */
 
-test.describe("Wallets page", () => {
+test.describe("Wallets page [US-001, EP-01]", () => {
   const VALID_FLARE_ADDRESS = "0x1234567890abcdef1234567890abcdef12345678";
   const SECOND_FLARE_ADDRESS = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd";
 

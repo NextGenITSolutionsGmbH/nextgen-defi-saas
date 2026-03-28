@@ -4,6 +4,10 @@ import { router, protectedProcedure } from "../trpc";
 import { addExportJob } from '../queue';
 import { enforceExportFormat } from "../lib/plan-limits";
 
+/**
+ * @spec US-004, EP-07 — Export creation, format selection, plan-based limits
+ */
+
 // ---------------------------------------------------------------------------
 // Schemas
 // ---------------------------------------------------------------------------

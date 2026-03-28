@@ -49,11 +49,17 @@ function makeDecodedTx(overrides: Partial<DecodedTransaction> = {}): DecodedTran
   };
 }
 
+/**
+ * @spec EP-01 — Wallet sync with adaptive chunking
+ * @spec FR-01-05 — Adaptive chunk sizing for RPC calls
+ * @spec FR-01-07 — Sync progress reporting
+ */
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('WalletSyncService', () => {
+describe('WalletSyncService [EP-01, FR-01-05, FR-01-07]', () => {
   let getBlockNumberMock: ReturnType<typeof vi.fn>;
   let getWalletTransactionsMock: ReturnType<typeof vi.fn>;
   let verifyConnectionMock: ReturnType<typeof vi.fn>;

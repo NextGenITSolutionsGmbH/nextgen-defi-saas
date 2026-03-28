@@ -4,6 +4,8 @@
 // Classifies decoded events native to the Flare Network itself:
 // delegation rewards, FlareDrop claims, rFLR emissions, FAssets, and
 // generic ERC20 transfers/approvals.
+//
+// @spec US-007, EP-11 — FLR staking, FlareDrops classification
 // ---------------------------------------------------------------------------
 
 import type { DecodedEvent, ClassificationResult } from '../types';

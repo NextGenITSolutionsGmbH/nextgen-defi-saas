@@ -2,6 +2,13 @@
 // DeFi Tracker SaaS  --  Prisma Schema
 // Database: PostgreSQL
 // Convention: camelCase models, snake_case DB columns / tables
+//
+// @spec FR-01-04 — Multi-wallet support (PlanTier limits)
+// @spec EP-06 — TxClassification model, AmpelStatus (TxStatus enum)
+// @spec EP-08 — TaxLot, TaxEvent models for FIFO/LIFO
+// @spec EP-05 — TokenPrice, PriceAuditLog models
+// @spec NFR-S09 — AuditLog model (GoBD hash chain)
+// @spec EP-07 — Export model (CSV/XLSX/PDF workflow)
 // ---------------------------------------------------------------
 
 generator client {

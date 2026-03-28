@@ -7,6 +7,8 @@ import AxeBuilder from "@axe-core/playwright";
  * Each page is loaded and scanned for WCAG 2.1 AA violations.
  * The tests assert zero violations — any failure will include
  * the violation details for quick remediation.
+ *
+ * @spec NFR-C06 — WCAG 2.2 AA accessibility compliance
  */
 
 function formatViolations(violations: Array<{ id: string; description: string; nodes: unknown[] }>) {
@@ -18,7 +20,7 @@ function formatViolations(violations: Array<{ id: string; description: string; n
     .join("\n");
 }
 
-test.describe("Accessibility (axe-core)", () => {
+test.describe("Accessibility (axe-core) [NFR-C06]", () => {
   test("login page has no a11y violations", async ({ page }) => {
     await page.goto("/login");
     await page.waitForLoadState("networkidle");

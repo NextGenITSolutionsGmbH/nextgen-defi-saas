@@ -1,0 +1,82 @@
+name: Spec Coverage
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: spec-coverage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  spec-refs:
+    name: Spec Reference Check
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 5
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check spec references in test files
+        id: spec-check
+        run: |
+          # Capture output for the job summary and PR comment
+          OUTPUT=$(bash scripts/check-spec-refs.sh 2>&1)
+          echo "$OUTPUT"
+
+          # Write to job summary
+          {
+            echo "## Spec Reference Coverage"
+            echo ""
+            echo '```'
+            echo "$OUTPUT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Save output for PR comment step (escape for multiline)
+          EOF_MARKER=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "report<<${EOF_MARKER}" >> "$GITHUB_OUTPUT"
+          echo "$OUTPUT" >> "$GITHUB_OUTPUT"
+          echo "${EOF_MARKER}" >> "$GITHUB_OUTPUT"
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `### Spec Reference Coverage\n\n\`\`\`\n${process.env.REPORT}\n\`\`\`\n\n<sub>This check is informational only and does not block merges.</sub>`;
+
+            // Find existing comment from this workflow to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const marker = '### Spec Reference Coverage';
+            const existing = comments.find(c =>
+              c.user?.type === 'Bot' && c.body?.startsWith(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+        env:
+          REPORT: ${{ steps.spec-check.outputs.report }}

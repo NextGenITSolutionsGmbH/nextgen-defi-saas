@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Health endpoint", () => {
+/**
+ * @spec NFR-I06 — Uptime/health check endpoint (E2E)
+ */
+
+test.describe("Health endpoint [NFR-I06]", () => {
   test("GET /api/health returns 200", async ({ request }) => {
     const response = await request.get("/api/health");
 

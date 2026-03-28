@@ -6,9 +6,15 @@ import {
   verifyTOTP,
 } from "../auth-utils";
 
+/**
+ * @spec NFR-S01 — Password hashing (Argon2id)
+ * @spec NFR-S05 — Session management
+ * @spec NFR-S06 — TOTP 2FA authentication
+ */
+
 // -------------------- hashPassword / verifyPassword --------------------
 
-describe("hashPassword", () => {
+describe("hashPassword [NFR-S01, NFR-S05, NFR-S06]", () => {
   it("returns a non-empty Argon2id hash string", async () => {
     const hash = await hashPassword("SuperSecure!123");
     expect(hash).toBeTruthy();

@@ -1263,3 +1263,45 @@ Die folgende Matrix ordnet alle regulatorischen Compliance-Maßnahmen den Entwic
 | **Nutzerfreundlichkeit (TtV)** | TtV \> 5 Minuten = Produktversagen — CoinTracking braucht Stunden, Blockpit 20–30 Minuten               | Onboarding-Usability-Tests in Phase 2; A/B-Tests nach Launch; Progressive-Disclosure-UX                | TtV-Median \> 5 Min. in Phase-2-Tests → Onboarding-Redesign-Sprint                                |
 | **Rechtssicherheit**           | Fehlklassifikationen = Haftungsrisiko (§ 280 BGB); Nutzer können Steuerberater-Fehler dem Tool anlasten | Disclaimer auf jedem Export; Steuerberater-Empfehlung in jedem Graubereich-Flow; AGB-Schutzklausel     | Nutzer-Beschwerde über Steuerfolge → sofortiger CTO + Steuerberater Review                        |
 | **First-Mover-Verteidigung**   | CoinTracking oder Blockpit kündigt Flare-Support in 12–18 Monaten wahrscheinlich an                     | Phase-4-Multi-Chain beschleunigen; B2B-Kanzlei-Segment als höherer Lock-in aufbauen; Community-Bindung | Competitor-Alert: Blockpit/CT Flare-Erwähnung auf GitHub / Changelog → sofort in Sprint einplanen |
+
+---
+
+## Anhang C — Specification Change Log (Implementation Divergences)
+
+This appendix tracks substantive differences between the original specification and the actual implementation, maintaining spec freshness per the project's spec-driven development practices.
+
+**Last updated:** 2026-03-28
+
+### C.1 Database Schema Divergences
+
+| Area | Spec (Section 06.2) | Implementation | Rationale |
+|------|---------------------|----------------|-----------|
+| Audit log table | `audit_log_entries` | `audit_logs` (AuditLog model) | Entity-agnostic design allows auditing any entity type, not just transactions |
+| Price cache table | `price_cache` | `token_prices` (TokenPrice model) | Clearer naming |
+| Additional models | 8 core tables listed | 13 models total | TxLeg, TaxLot, TaxEvent, PriceAuditLog, NotificationPreference added to support User Stories EP-08, EP-05 and Phase 2 features |
+| Transaction.tx_type | Listed as required field | Not present; type stored in TxClassification.ctType | Classification is a separate concern, linked via FK |
+| User model | id, email, password_hash, plan | Adds stripeCustomerId, totpSecret, totpEnabled | Phase 2 Stripe + 2FA additions |
+
+### C.2 Enum Value Changes
+
+| Enum | Spec Values | Added in Implementation | Phase |
+|------|-------------|------------------------|-------|
+| TaxMethod | FIFO, LIFO | HIFO (pre-implemented) | Phase 4 (EP-18) |
+| PlanTier | STARTER, PRO | KANZLEI (pre-implemented) | Phase 4 (EP-16) |
+
+### C.3 Phase Timeline Adjustments
+
+| Feature | Spec Phase | Actual Implementation | Notes |
+|---------|-----------|----------------------|-------|
+| Stripe billing integration | Phase 3 (Sept 2026) | Phase 2 (March 2026) | Infrastructure prepared early for Phase 3 launch |
+| XLSX + PDF export formats | Phase 2 | Phase 2 | Matches spec |
+| Notification preferences | Phase 2 | Phase 2 | Matches spec |
+| WalletConnect v2 | Phase 1 | Phase 2 | Delayed from Phase 1 to Phase 2 |
+
+### C.4 Architecture Decisions
+
+| Decision | Spec Approach | Implementation | Rationale |
+|----------|-------------- |----------------|-----------|
+| API style | REST API (Section 08) | tRPC (type-safe RPC) | tRPC chosen for Phase 1/2; REST API planned for Phase 4 public API (EP-17) |
+| Audit log design | TX-specific (tx_id FK) | Entity-agnostic (entityType + entityId) | Supports auditing classifications, exports, prices — not just transactions |
+| Price transparency | Single price_cache table | TokenPrice + PriceAuditLog | Separate audit log tracks fallback chain (FTSO → CoinGecko → CMC) per NFR-C05 |

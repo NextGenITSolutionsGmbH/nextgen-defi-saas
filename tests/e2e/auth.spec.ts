@@ -1,11 +1,15 @@
 import { test, expect } from "@playwright/test";
 
+/**
+ * @spec NFR-S06 — 2FA TOTP authentication flow
+ */
+
 const TEST_USER = {
   email: `e2e-${Date.now()}@test.defi-tracker.local`,
   password: "E2eT3st!Secure#2025",
 };
 
-test.describe.serial("Authentication flow", () => {
+test.describe.serial("Authentication flow [NFR-S06]", () => {
   test("register a new account", async ({ page }) => {
     await page.goto("/register");
 

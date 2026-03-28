@@ -11,6 +11,11 @@ import { check, group, sleep } from "k6";
  *              --env TEST_EMAIL=test@example.com \
  *              --env TEST_PASSWORD=TestP@ss1 \
  *              tests/k6/db-perf.js
+ *
+ * @spec NFR-P05 — Transaction list query < 1000ms (p95) under load
+ * @spec NFR-P06 — Dashboard aggregation < 1000ms (p95)
+ * @spec NFR-P07 — Export row counting < 1000ms (p95)
+ * @spec NFR-P08 — Database query performance under 100 VU sustained load
  */
 
 export const options = {

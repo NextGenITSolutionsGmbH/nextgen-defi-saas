@@ -4,6 +4,8 @@
 // Date format: DD.MM.YYYY HH:MM:SS (UTC)
 // Decimal separator: comma (German format)
 // Encoding: UTF-8 with BOM
+//
+// @spec US-004, EP-07 — CoinTracking 15-column CSV export
 // ---------------------------------------------------------------------------
 
 import { COINTRACKING_TYPES } from '../constants';

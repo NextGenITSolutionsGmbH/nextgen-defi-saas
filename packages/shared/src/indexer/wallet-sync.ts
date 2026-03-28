@@ -2,6 +2,9 @@
  * Wallet Synchronization Service
  * Fetches all transactions for a wallet from the Flare blockchain
  * and stores them in the database with decoded event data
+ *
+ * @spec FR-01-05, FR-01-06, FR-01-07 — Historical TX sync, real-time monitoring, progress
+ * @spec EP-01 — Wallet synchronisation
  */
 
 import { FlareRpcClient, type FlareRpcConfig, type DecodedTransaction } from './flare-rpc';

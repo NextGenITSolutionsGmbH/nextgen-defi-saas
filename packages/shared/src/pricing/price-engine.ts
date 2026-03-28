@@ -5,6 +5,8 @@
 // Core business module for BMF-2025 tax compliance. Every on-chain
 // transaction requires an EUR price at the exact timestamp, with the
 // price source logged for GoBD audit trail.
+//
+// @spec FR-05-01..FR-05-06, EP-05 — 4-tier EUR price engine (FTSO -> CoinGecko -> CMC -> Manual)
 // ---------------------------------------------------------------------------
 
 import type { PriceResult, PriceSourceType } from '../types';

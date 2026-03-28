@@ -2,6 +2,8 @@
 // GoBD-compliant Audit Log with SHA-256 Hash Chain
 // Per Section 147 AO and BMF-Schreiben 28.11.2019
 // Hash chain ensures immutability and tamper detection
+//
+// @spec NFR-S09, NFR-C04 — GoBD SHA-256 hash chain audit log (§147 AO)
 // ---------------------------------------------------------------------------
 
 import { createHash } from 'crypto';

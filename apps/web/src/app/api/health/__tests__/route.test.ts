@@ -21,7 +21,11 @@ async function importRoute() {
   return import("../route");
 }
 
-describe("GET /api/health", () => {
+/**
+ * @spec NFR-I06 — Uptime/health check endpoint
+ */
+
+describe("GET /api/health [NFR-I06]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

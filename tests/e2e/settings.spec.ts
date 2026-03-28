@@ -6,9 +6,11 @@ import { loginAsTestUser, registerTestUser } from "../helpers/auth";
  *
  * Covers profile display, plan badge, 2FA setup flow initiation,
  * password change form toggle, and notification preference toggles.
+ *
+ * @spec EP-08 — FIFO/LIFO selection and German tax settings
  */
 
-test.describe("Settings page", () => {
+test.describe("Settings page [EP-08]", () => {
   let creds: { email: string; password: string };
 
   test.beforeAll(async ({ browser }) => {

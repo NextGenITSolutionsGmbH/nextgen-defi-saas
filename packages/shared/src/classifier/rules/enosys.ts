@@ -4,6 +4,8 @@
 // Classifies decoded events from the Enosys protocol on Flare Network.
 // Covers DEX swaps, LP operations, CDP (collateralised debt positions),
 // stablecoin minting, farming rewards, and bridge transfers.
+//
+// @spec FR-03-01..FR-03-09, EP-03 — Enosys DEX + CDP classification rules
 // ---------------------------------------------------------------------------
 
 import type { DecodedEvent, ClassificationResult } from '../types';

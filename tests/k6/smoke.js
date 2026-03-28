@@ -5,6 +5,9 @@ import { check, sleep } from "k6";
  * k6 smoke test — light load to verify the system is alive.
  *
  * Run:  k6 run tests/k6/smoke.js
+ *
+ * @spec NFR-P01 — System availability under light load
+ * @spec NFR-P02 — Health endpoint response time < 500ms (p95)
  */
 
 export const options = {

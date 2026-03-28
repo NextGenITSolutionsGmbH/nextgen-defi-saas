@@ -2,6 +2,16 @@
 // Unit tests for the Price Fetch Worker
 // All external dependencies (Prisma, price APIs, Redis) are fully mocked.
 // ---------------------------------------------------------------------------
+
+/**
+ * @spec EP-05 — EUR price engine with 4-tier waterfall fallback
+ * @spec FR-05-01 — FTSO on-chain price source
+ * @spec FR-05-02 — CoinGecko fallback
+ * @spec FR-05-03 — CoinMarketCap fallback
+ * @spec FR-05-04 — Manual fallback with zero price
+ * @spec FR-05-05 — Price audit log for GoBD compliance
+ */
+
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -104,7 +114,7 @@ const baseJobData: PriceFetchJobData = {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("price-fetch worker — processPriceFetch", () => {
+describe("price-fetch worker — processPriceFetch [EP-05, FR-05-01..FR-05-05]", () => {
   // -----------------------------------------------------------------------
   // Cache hit
   // -----------------------------------------------------------------------

@@ -4,6 +4,8 @@
 // Classifies decoded events from Kinetic Market (Compound V2 fork on Flare).
 // Covers lending supply/withdraw, borrow/repay, liquidations, interest
 // accrual, and kToken transfers.
+//
+// @spec US-005, EP-04 — Kinetic Market lending classification
 // ---------------------------------------------------------------------------
 
 import type { DecodedEvent, ClassificationResult } from '../types';

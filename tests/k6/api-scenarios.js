@@ -11,6 +11,11 @@ import { check, group, sleep } from "k6";
  *              --env TEST_EMAIL=test@example.com \
  *              --env TEST_PASSWORD=TestP@ss1 \
  *              tests/k6/api-scenarios.js
+ *
+ * @spec NFR-P04 — Login response time < 1000ms (p95)
+ * @spec NFR-P05 — Dashboard batch load < 500ms (p95)
+ * @spec NFR-P06 — Wallet sync trigger < 500ms (p95)
+ * @spec NFR-P07 — Export creation < 500ms (p95)
  */
 
 export const options = {

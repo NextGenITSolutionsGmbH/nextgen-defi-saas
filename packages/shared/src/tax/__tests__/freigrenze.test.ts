@@ -3,6 +3,10 @@ import { calculateFreigrenze } from '../freigrenze';
 import type { TaxGainLossResult } from '../types';
 
 /**
+ * @spec EP-08 — §23 EStG EUR 1,000 & §22 Nr.3 EUR 256 exemption limits (Freigrenze)
+ */
+
+/**
  * Helper to create a TaxGainLossResult for testing.
  * By default: PARAGRAPH_23, taxYear 2025, not tax-free.
  */
@@ -21,7 +25,7 @@ function makeEvent(overrides: Partial<TaxGainLossResult> = {}): TaxGainLossResul
   };
 }
 
-describe('calculateFreigrenze', () => {
+describe('calculateFreigrenze [EP-08]', () => {
   // ---- Section 23 EStG TESTS ----
 
   it('should return GREEN when gains are well below threshold (EUR 1000)', () => {

@@ -47,11 +47,17 @@ import {
 import type { TestCaller } from "../../../../../../tests/helpers/trpc";
 import { addExportJob } from "../../queue";
 
+/**
+ * @spec US-004 — CoinTracking CSV export user story
+ * @spec EP-07 — Export router and generation pipeline
+ * @spec FR-01-04 — Plan-based export format restrictions
+ */
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("export router — integration", () => {
+describe("export router — integration [US-004, EP-07, FR-01-04]", () => {
   let userId: string;
   let caller: TestCaller;
   let walletId: string;

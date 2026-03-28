@@ -1,5 +1,7 @@
 // ---------------------------------------------------------------------------
 // @defi-tracker/shared — Constants & configuration values
+//
+// @spec EP-01..EP-09 — Flare Network constants, token registry, protocol addresses, BMF tax constants
 // ---------------------------------------------------------------------------
 
 import type { FlareChainConfig } from '../types';

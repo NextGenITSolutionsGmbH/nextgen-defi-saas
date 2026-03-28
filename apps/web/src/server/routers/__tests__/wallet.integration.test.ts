@@ -50,7 +50,13 @@ import { addWalletSyncJob } from "../../queue";
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("wallet router — integration", () => {
+/**
+ * @spec US-001 — Wallet management (add, list, remove, sync)
+ * @spec EP-01 — Wallet endpoints
+ * @spec FR-01-04 — Wallet plan limits and chain mapping
+ */
+
+describe("wallet router — integration [US-001, EP-01, FR-01-04]", () => {
   let userId: string;
   let caller: TestCaller;
 

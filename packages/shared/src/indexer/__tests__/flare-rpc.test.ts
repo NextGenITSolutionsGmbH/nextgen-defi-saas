@@ -102,7 +102,12 @@ const TEST_CONFIG: FlareRpcConfig = {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('FlareRpcClient', () => {
+/**
+ * @spec EP-01 — Flare RPC connectivity
+ * @spec NFR-I04 — RPC reliability and error handling
+ */
+
+describe('FlareRpcClient [EP-01, NFR-I04]', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {

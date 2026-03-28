@@ -2,6 +2,10 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 
+/**
+ * @spec US-002, US-003, US-005, US-008, EP-06, EP-09, EP-10 — Transaction listing, classification, dual-scenario
+ */
+
 // Valid CoinTracking types
 const ctTypeEnum = z.enum([
   "Trade",

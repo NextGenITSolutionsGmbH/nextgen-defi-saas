@@ -6,9 +6,12 @@ import { loginAsTestUser, registerTestUser } from "../helpers/auth";
  *
  * Covers export creation, export history display, format selection,
  * and status lifecycle (PENDING → GENERATING → COMPLETED).
+ *
+ * @spec US-004 — CoinTracking CSV export
+ * @spec EP-07 — Export format selection and status display
  */
 
-test.describe("Exports page", () => {
+test.describe("Exports page [US-004, EP-07]", () => {
   let creds: { email: string; password: string };
 
   test.beforeAll(async ({ browser }) => {

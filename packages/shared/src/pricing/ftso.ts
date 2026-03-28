@@ -1,6 +1,8 @@
 // ---------------------------------------------------------------------------
 // FTSO On-Chain Price Oracle — Flare Time Series Oracle
 // Primary price source for Flare ecosystem tokens (Tier 1)
+//
+// @spec FR-05-01, EP-05 — FTSO on-chain price oracle (primary source)
 // ---------------------------------------------------------------------------
 
 import type { PriceResult } from '../types';

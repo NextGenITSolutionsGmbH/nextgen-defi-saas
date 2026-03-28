@@ -1,5 +1,7 @@
 // ---------------------------------------------------------------------------
 // Price Fetch Worker — retrieves EUR token prices with waterfall fallback
+//
+// @spec FR-05-01..FR-05-05, EP-05 — Background price fetch with waterfall fallback
 // ---------------------------------------------------------------------------
 import { Worker, Job } from "bullmq";
 import {

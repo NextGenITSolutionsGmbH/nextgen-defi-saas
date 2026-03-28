@@ -182,11 +182,16 @@ function parseCsv(csvString: string): { headers: string[]; rows: string[][] } {
   return { headers, rows };
 }
 
+/**
+ * @spec US-004, EP-07 — Full CoinTracking export pipeline validation
+ * @spec EP-09 — Graubereich dual-scenario (Model A/B)
+ */
+
 // ---------------------------------------------------------------------------
 // End-to-end pipeline tests
 // ---------------------------------------------------------------------------
 
-describe('CoinTracking CSV E2E Pipeline', () => {
+describe('CoinTracking CSV E2E Pipeline [US-004, EP-07, EP-09]', () => {
   const allRows: CoinTrackingRow[] = [
     makeTradeRow(),
     makeStakingRow(),

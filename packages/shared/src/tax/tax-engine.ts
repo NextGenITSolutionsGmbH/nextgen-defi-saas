@@ -1,6 +1,9 @@
 // ---------------------------------------------------------------------------
 // @defi-tracker/shared — Tax Calculation Engine (Orchestrator)
 // Main entry point for German BMF 2025 compliant tax calculations.
+//
+// @spec EP-08 — Tax calculation engine orchestrator
+// @spec US-006 — Portfolio P&L and tax positions
 // ---------------------------------------------------------------------------
 
 import type {

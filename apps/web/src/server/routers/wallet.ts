@@ -3,6 +3,10 @@ import { router, protectedProcedure } from "../trpc";
 import { addWalletSyncJob } from '../queue';
 import { enforceWalletLimit, enforceMonthlyTxLimit } from "../lib/plan-limits";
 
+/**
+ * @spec US-001, EP-01 — Wallet management, sync triggers
+ */
+
 const addWalletSchema = z.object({
   address: z
     .string()

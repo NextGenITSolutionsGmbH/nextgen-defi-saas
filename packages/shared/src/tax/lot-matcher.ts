@@ -1,6 +1,8 @@
 // ---------------------------------------------------------------------------
 // @defi-tracker/shared — FIFO/LIFO Lot Matching Engine
 // Matches disposals against tax lots per BMF 2025 guidelines.
+//
+// @spec EP-08 — FIFO/LIFO lot matching per BMF 2025
 // ---------------------------------------------------------------------------
 
 import type { TaxLot, TaxMethod, Disposal, TaxGainLossResult } from './types';

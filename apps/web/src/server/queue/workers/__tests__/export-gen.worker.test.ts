@@ -3,6 +3,12 @@
 // All external dependencies (Prisma, export generators, storage, PDF
 // converter, email) are fully mocked.
 // ---------------------------------------------------------------------------
+
+/**
+ * @spec EP-07 — Export generation (CSV, XLSX, PDF)
+ * @spec NFR-S09 — GoBD audit chain integration for exports
+ */
+
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -169,7 +175,7 @@ function sampleClassification(overrides = {}) {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("export-gen worker — processExportGeneration", () => {
+describe("export-gen worker — processExportGeneration [EP-07, NFR-S09]", () => {
   // -----------------------------------------------------------------------
   // Export record not found
   // -----------------------------------------------------------------------

@@ -9,7 +9,12 @@ import {
 } from '../cointracking-csv';
 import type { CoinTrackingRow } from '../cointracking-csv';
 
-describe('formatDecimalDE', () => {
+/**
+ * @spec US-004, EP-07 — CoinTracking 15-column CSV format, German decimal/date formatting
+ * @spec NFR-P05 — Export generation < 10s for 10,000 TX
+ */
+
+describe('formatDecimalDE [US-004, EP-07, NFR-P05]', () => {
   it('should replace dots with commas for German decimal format', () => {
     expect(formatDecimalDE('1234.56')).toBe('1234,56');
   });

@@ -2,6 +2,8 @@
 // Wallet Sync Worker -- fetches on-chain transactions for a wallet from
 // Flare Network, decodes event logs, classifies them for tax purposes,
 // and persists Transaction + TxLeg + TxClassification records.
+//
+// @spec FR-01-05, EP-01 — Background wallet sync job
 // ---------------------------------------------------------------------------
 import { Worker, Job } from "bullmq";
 import {

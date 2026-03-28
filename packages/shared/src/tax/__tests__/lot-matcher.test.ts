@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { LotMatcher } from '../lot-matcher';
 import type { TaxLot, Disposal } from '../types';
 
-describe('LotMatcher', () => {
+/**
+ * @spec EP-08 — FIFO/LIFO lot matching algorithm
+ */
+
+describe('LotMatcher [EP-08]', () => {
   function makeLot(overrides: Partial<TaxLot> & { id: string }): TaxLot {
     return {
       tokenSymbol: 'FLR',

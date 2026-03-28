@@ -3,6 +3,13 @@
 // All external dependencies (Prisma, RPC, ClassificationEngine, queues) are
 // mocked so that no real network or database calls are made.
 // ---------------------------------------------------------------------------
+
+/**
+ * @spec EP-01 — Background wallet sync worker
+ * @spec FR-01-05 — Adaptive chunking and error recovery
+ * @spec EP-06 — Classification integration within sync pipeline
+ */
+
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 
 // ---------------------------------------------------------------------------
@@ -173,7 +180,7 @@ function createMockJob(
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("wallet-sync worker — processWalletSync", () => {
+describe("wallet-sync worker — processWalletSync [EP-01, FR-01-05, EP-06]", () => {
   // -------------------------------------------------------------------------
   // Happy path
   // -------------------------------------------------------------------------

@@ -2,6 +2,8 @@
 // PDF Tax Report Generator (HTML placeholder)
 // Generates a well-structured HTML document that can be converted to PDF
 // via Puppeteer or similar headless browser tooling.
+//
+// @spec EP-07 — Tax report PDF export
 // ---------------------------------------------------------------------------
 
 /**

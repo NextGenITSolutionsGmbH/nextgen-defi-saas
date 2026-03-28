@@ -1,5 +1,9 @@
 import { router, protectedProcedure } from "../trpc";
 
+/**
+ * @spec US-006, EP-08 — Dashboard KPIs, Freigrenze tracking, Haltefrist alerts
+ */
+
 export const dashboardRouter = router({
   /**
    * Summary — wallet/tx/export/sync overview counts

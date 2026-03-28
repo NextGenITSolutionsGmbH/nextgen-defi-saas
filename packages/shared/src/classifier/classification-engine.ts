@@ -4,6 +4,9 @@
 // 5-layer classification pipeline that routes decoded blockchain events
 // through protocol-specific classifiers and heuristic fallbacks to produce
 // CoinTracking-compatible, BMF-2025-compliant tax classifications.
+//
+// @spec EP-06 — TX Classification Engine (5-layer pipeline)
+// @spec EP-09 — Graubereich Ampel & Dual-Szenario
 // ---------------------------------------------------------------------------
 
 import type { DecodedEvent, ClassificationResult, AmpelStatus } from './types';

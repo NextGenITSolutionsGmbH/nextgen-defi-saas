@@ -1,6 +1,8 @@
 // ---------------------------------------------------------------------------
 // Export Generation Worker — produces CoinTracking CSV / XLSX / PDF files
 // Uses shared export modules for CSV generation, file hashing, and audit logging.
+//
+// @spec US-004, EP-07, NFR-S09 — Background export generation with GoBD audit
 // ---------------------------------------------------------------------------
 import { Worker, Job } from "bullmq";
 import {

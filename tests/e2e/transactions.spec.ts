@@ -6,9 +6,13 @@ import { loginAsTestUser, registerTestUser } from "../helpers/auth";
  *
  * Covers transaction list display, Ampel status filtering, TX hash search,
  * empty state, and cursor-based pagination.
+ *
+ * @spec US-002 — Transaction list and management
+ * @spec EP-06 — Classification pipeline integration
+ * @spec EP-09 — Ampel filter chips (GREEN/YELLOW/RED/GRAY)
  */
 
-test.describe("Transactions page", () => {
+test.describe("Transactions page [US-002, EP-06, EP-09]", () => {
   let creds: { email: string; password: string };
 
   test.beforeAll(async ({ browser }) => {

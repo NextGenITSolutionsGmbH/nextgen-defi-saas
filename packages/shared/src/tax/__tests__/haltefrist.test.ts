@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { calculateHaltefrist, getUpcomingTaxFreeAssets } from '../haltefrist';
 import type { TaxLot } from '../types';
 
-describe('calculateHaltefrist', () => {
+/**
+ * @spec EP-08 — §23 EStG 365-day holding period (Haltefrist)
+ */
+
+describe('calculateHaltefrist [EP-08]', () => {
   function makeLot(overrides: Partial<TaxLot> & { id: string }): TaxLot {
     return {
       tokenSymbol: 'FLR',

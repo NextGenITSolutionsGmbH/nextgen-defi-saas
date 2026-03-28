@@ -50,7 +50,12 @@ import type { TestCaller } from "../../../../../../tests/helpers/trpc";
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("dashboard router — integration", () => {
+/**
+ * @spec US-006 — Dashboard summary and Ampel breakdown
+ * @spec EP-08 — Dashboard data endpoint
+ */
+
+describe("dashboard router — integration [US-006, EP-08]", () => {
   let userId: string;
   let caller: TestCaller;
 

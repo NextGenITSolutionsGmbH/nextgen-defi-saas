@@ -3,6 +3,8 @@
 // ---------------------------------------------------------------------------
 // These types power the Transaction Classification Engine and its Ampel
 // (traffic-light) system for BMF-2025-compliant German tax classification.
+//
+// @spec EP-06, EP-09 — Classification types, AmpelStatus, ModelChoice
 // ---------------------------------------------------------------------------
 
 /**

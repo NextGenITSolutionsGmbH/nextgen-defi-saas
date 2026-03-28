@@ -5,11 +5,14 @@ import { $Enums, Prisma } from "@prisma/client";
  * Schema smoke-tests — verify that Prisma generated the expected
  * models, enums, and enum values so accidental schema drift is caught
  * before it reaches a real database migration.
+ *
+ * @spec EP-06 — Classification-related enums (TxStatus, ModelChoice)
+ * @spec EP-08 — Tax-related enums (TaxMethod, TaxEventType, LotStatus)
  */
 
 // --------------- Enum values -----------------
 
-describe("PlanTier enum", () => {
+describe("PlanTier enum [EP-06, EP-08]", () => {
   const values = Object.values($Enums.PlanTier ?? {});
 
   it("contains STARTER", () => {

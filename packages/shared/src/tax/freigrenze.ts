@@ -1,6 +1,8 @@
 // ---------------------------------------------------------------------------
 // @defi-tracker/shared — Freigrenze (Exemption Limit) Monitor
 // Monitors German BMF 2025 tax exemption thresholds.
+//
+// @spec EP-08 — §23 EStG EUR 1,000 & §22 Nr.3 EUR 256 Freigrenze monitor
 // ---------------------------------------------------------------------------
 
 import type { TaxGainLossResult, FreigrenzeStatus } from './types';

@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { ClassificationEngine } from '../classification-engine';
 import type { DecodedEvent, AmpelStatus } from '../types';
 
-describe('ClassificationEngine', () => {
+/**
+ * @spec EP-06 — 5-layer classification pipeline
+ * @spec EP-09 — Ampel system (GREEN/YELLOW/RED/GRAY)
+ */
+
+describe('ClassificationEngine [EP-06, EP-09]', () => {
   const engine = new ClassificationEngine();
 
   function makeEvent(overrides: Partial<DecodedEvent> = {}): DecodedEvent {

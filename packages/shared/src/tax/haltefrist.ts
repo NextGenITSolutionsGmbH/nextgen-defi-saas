@@ -1,6 +1,8 @@
 // ---------------------------------------------------------------------------
 // @defi-tracker/shared — Haltefrist (Holding Period) Tracker
 // Tracks the 365-day holding period per Section 23 Abs. 1 S. 1 Nr. 2 EStG.
+//
+// @spec EP-08 — §23 EStG 365-day holding period tracker
 // ---------------------------------------------------------------------------
 
 import type { TaxLot, HaltefristEntry } from './types';

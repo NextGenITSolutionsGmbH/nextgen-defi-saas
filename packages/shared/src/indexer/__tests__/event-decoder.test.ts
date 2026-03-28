@@ -53,11 +53,15 @@ function padAddress(address: string): string {
   return '0x' + address.slice(2).toLowerCase().padStart(64, '0');
 }
 
+/**
+ * @spec EP-02, EP-03, EP-04 — EVM event decoding for SparkDEX, Enosys, Kinetic
+ */
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('Event Decoder', () => {
+describe('Event Decoder [EP-02, EP-03, EP-04]', () => {
   // ---- ERC20 Transfer ----
 
   describe('ERC20 Transfer', () => {

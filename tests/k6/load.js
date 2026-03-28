@@ -5,6 +5,10 @@ import { check, group, sleep } from "k6";
  * k6 load test — sustained load to surface performance regressions.
  *
  * Run:  k6 run tests/k6/load.js
+ *
+ * @spec NFR-P01 — 500 concurrent VU sustained load
+ * @spec NFR-P02 — p95 response time < 500ms under load
+ * @spec NFR-P03 — Error rate < 5% under sustained load
  */
 
 export const options = {

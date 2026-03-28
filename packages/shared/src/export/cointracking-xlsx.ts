@@ -1,6 +1,8 @@
 // ---------------------------------------------------------------------------
 // CoinTracking XLSX Export — 15-column standard format using ExcelJS
 // Uses the same headers, formatting, and structure as the CSV export.
+//
+// @spec EP-07 — CoinTracking XLSX export
 // ---------------------------------------------------------------------------
 
 import ExcelJS from "exceljs";

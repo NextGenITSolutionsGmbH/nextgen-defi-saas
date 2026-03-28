@@ -1,6 +1,9 @@
 /**
  * Event Decoder — Decodes EVM event logs into structured data
  * Uses ABI fragments to match and decode events from Flare DeFi protocols
+ *
+ * @spec FR-02-01..FR-02-10, FR-03-01..FR-03-09 — Protocol event decoding (SparkDEX, Enosys, Kinetic)
+ * @spec EP-02, EP-03, EP-04 — Protocol indexing
  */
 
 import type { RpcLog } from './flare-rpc';

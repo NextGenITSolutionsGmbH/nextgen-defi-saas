@@ -8,7 +8,12 @@ import {
 } from '../audit-log';
 import type { AuditLogEntry } from '../audit-log';
 
-describe('computeAuditHash', () => {
+/**
+ * @spec NFR-S09 — GoBD SHA-256 hash chain integrity
+ * @spec NFR-C04 — Tamper detection for audit logs
+ */
+
+describe('computeAuditHash [NFR-S09, NFR-C04]', () => {
   it('should compute a 64-character hex hash', () => {
     const entry: Omit<AuditLogEntry, 'sha256Hash'> = {
       entityType: 'transaction',

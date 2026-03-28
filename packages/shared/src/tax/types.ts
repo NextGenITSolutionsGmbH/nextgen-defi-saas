@@ -1,6 +1,8 @@
 // ---------------------------------------------------------------------------
 // @defi-tracker/shared — Tax Calculation Engine types
 // German BMF 2025 compliant type definitions
+//
+// @spec EP-08 — Tax types: TaxLot, TaxGainLossResult, FreigrenzeStatus, HaltefristEntry
 // ---------------------------------------------------------------------------
 
 /**

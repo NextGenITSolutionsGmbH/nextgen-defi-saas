@@ -51,7 +51,12 @@ import type { TestCaller } from "../../../../../../tests/helpers/trpc";
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("user router — integration", () => {
+/**
+ * @spec NFR-S01 — Authentication and password security
+ * @spec NFR-S06 — TOTP 2FA lifecycle
+ */
+
+describe("user router — integration [NFR-S01, NFR-S06]", () => {
   let userId: string;
   let caller: TestCaller;
 

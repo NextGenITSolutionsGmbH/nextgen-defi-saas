@@ -3,6 +3,8 @@
 // ---------------------------------------------------------------------------
 // Classifies decoded events from SparkDEX (Uniswap V3/V4 fork on Flare)
 // into CoinTracking-compatible types with BMF-2025 tax law references.
+//
+// @spec FR-02-01..FR-02-10, EP-02 — SparkDEX V3/V4 classification rules
 // ---------------------------------------------------------------------------
 
 import type { DecodedEvent, ClassificationResult } from '../types';
