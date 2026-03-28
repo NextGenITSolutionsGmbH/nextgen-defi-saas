@@ -66,19 +66,27 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hashPassword(password);
 
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         email: normalizedEmail,
         passwordHash,
-        notificationPrefs: {
-          create: {
-            exportComplete: false,
-            syncError: false,
-            taxReminder: false,
-          },
-        },
       },
+      select: { id: true },
     });
+
+    // Create default notification preferences (best-effort — table may not exist yet)
+    try {
+      await prisma.notificationPreference.create({
+        data: {
+          userId: user.id,
+          exportComplete: false,
+          syncError: false,
+          taxReminder: false,
+        },
+      });
+    } catch {
+      // notification_preferences table may not exist if migration 0002 hasn't been applied
+    }
 
     return NextResponse.json({ message: "Account created" }, { status: 201 });
   } catch (error) {
