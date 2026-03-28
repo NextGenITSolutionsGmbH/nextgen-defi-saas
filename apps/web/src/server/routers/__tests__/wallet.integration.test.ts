@@ -30,6 +30,10 @@ vi.mock("../../../lib/auth", () => ({
   auth: vi.fn().mockResolvedValue(null),
 }));
 
+vi.mock("../../../lib/rate-limit", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ success: true, remaining: 10, resetInMs: 60000 }),
+}));
+
 // ---------------------------------------------------------------------------
 // Imports (after mocks)
 // ---------------------------------------------------------------------------
