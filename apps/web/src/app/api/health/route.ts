@@ -15,6 +15,17 @@ export async function GET() {
     version: process.env.APP_VERSION ?? "0.1.0",
     db: "unknown" as string,
     redis: "unknown" as string,
+    auth: {
+      urlProtocol: (() => {
+        try {
+          const url = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL;
+          return url ? new URL(url).protocol : "not-set";
+        } catch {
+          return "invalid";
+        }
+      })(),
+      secureCookies: process.env.NODE_ENV === "production" ? "forced" : "auto",
+    },
   };
 
   try {

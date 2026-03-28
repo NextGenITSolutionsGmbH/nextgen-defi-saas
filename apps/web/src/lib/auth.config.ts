@@ -15,6 +15,7 @@ export const authConfig: NextAuthConfig = {
   // Explicit secret: NextAuth v5 beta looks for AUTH_SECRET env var first,
   // but Coolify/Docker may set NEXTAUTH_SECRET — support both.
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  useSecureCookies: process.env.NODE_ENV === "production",
   // No adapter needed: Credentials provider + JWT strategy manages sessions
   // entirely via signed cookies — no DB session tables required.
   session: {

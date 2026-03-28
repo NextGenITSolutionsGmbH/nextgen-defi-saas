@@ -19,7 +19,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/", icon: <LayoutDashboard size={20} /> },
+  { label: "Dashboard", href: "/overview", icon: <LayoutDashboard size={20} /> },
   { label: "Transactions", href: "/transactions", icon: <ArrowLeftRight size={20} /> },
   { label: "Wallets", href: "/wallets", icon: <Wallet size={20} /> },
   { label: "Exports", href: "/exports", icon: <Download size={20} /> },
@@ -87,9 +87,7 @@ export function Sidebar() {
           <ul className="flex flex-col gap-1 px-2" role="list">
             {navItems.map((item) => {
               const isActive =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname === item.href || pathname.startsWith(item.href + "/");
+                pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <li key={item.href}>
                   <a

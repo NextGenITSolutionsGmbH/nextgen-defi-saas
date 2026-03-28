@@ -11,6 +11,29 @@ echo "=== DeFi Tracker SaaS — Production Startup ==="
 echo "Working directory: $(pwd)"
 echo "APP_ROOT: ${APP_ROOT}"
 
+# Step 0: Validate critical environment variables
+echo "[0/3] Validating environment..."
+if [ -z "$NEXTAUTH_SECRET" ] && [ -z "$AUTH_SECRET" ]; then
+  echo "[0/3] FATAL: Neither NEXTAUTH_SECRET nor AUTH_SECRET is set."
+  exit 1
+fi
+
+if [ -n "$NEXTAUTH_URL" ]; then
+  case "$NEXTAUTH_URL" in
+    https://*)
+      echo "[0/3] NEXTAUTH_URL is HTTPS: $NEXTAUTH_URL"
+      ;;
+    http://localhost*)
+      echo "[0/3] WARNING: NEXTAUTH_URL is localhost HTTP — cookies will lack Secure flag"
+      ;;
+    http://*)
+      echo "[0/3] WARNING: NEXTAUTH_URL is HTTP: $NEXTAUTH_URL — ensure useSecureCookies is forced"
+      ;;
+  esac
+else
+  echo "[0/3] WARNING: NEXTAUTH_URL is not set — NextAuth will use request Host header"
+fi
+
 # Step 1: Run database migrations
 echo "[1/3] Running database migrations..."
 if $PRISMA_CLI migrate deploy --schema "$SCHEMA"; then

@@ -520,8 +520,9 @@ export const userRouter = router({
       }
 
       const baseUrl =
-        process.env.NEXTAUTH_URL ??
         process.env.NEXT_PUBLIC_APP_URL ??
+        process.env.AUTH_URL ??
+        process.env.NEXTAUTH_URL ??
         "http://localhost:3000";
 
       const session = await stripe.checkout.sessions.create({
@@ -551,8 +552,9 @@ export const userRouter = router({
     }
 
     const baseUrl =
-      process.env.NEXTAUTH_URL ??
       process.env.NEXT_PUBLIC_APP_URL ??
+      process.env.AUTH_URL ??
+      process.env.NEXTAUTH_URL ??
       "http://localhost:3000";
 
     const session = await stripe.billingPortal.sessions.create({
