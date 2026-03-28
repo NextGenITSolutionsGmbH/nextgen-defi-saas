@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { router, protectedProcedure } from "../trpc";
+import { router, protectedProcedure, createRateLimitedProcedure } from "../trpc";
 import { addExportJob } from '../queue';
 import { enforceExportFormat } from "../lib/plan-limits";
+import { invalidateCache } from "../lib/cache";
 
 /**
  * @spec US-004, EP-07 — Export creation, format selection, plan-based limits
@@ -51,7 +52,7 @@ export const exportRouter = router({
    * Create a new export.
    * Validates inputs, creates the Export record, and returns metadata.
    */
-  create: protectedProcedure
+  create: createRateLimitedProcedure("export.create", 3, 60 * 1000)
     .input(createExportSchema)
     .mutation(async ({ ctx, input }) => {
       enforceExportFormat(ctx.user.plan, input.format);
@@ -109,6 +110,8 @@ export const exportRouter = router({
       });
 
       await addExportJob(exportRecord.id, ctx.user.id, input.taxYear, input.method, input.format);
+
+      await invalidateCache(ctx.user.id, ["export.*", "dashboard.summary"]);
 
       return {
         id: exportRecord.id,
@@ -226,7 +229,7 @@ export const exportRouter = router({
   /**
    * Re-generate a previously created export.
    */
-  regenerate: protectedProcedure
+  regenerate: createRateLimitedProcedure("export.regenerate", 3, 60 * 1000)
     .input(regenerateExportSchema)
     .mutation(async ({ ctx, input }) => {
       const existing = await ctx.db.export.findFirst({
@@ -257,6 +260,8 @@ export const exportRouter = router({
       });
 
       await addExportJob(newExport.id, ctx.user.id, existing.taxYear, existing.method as "FIFO" | "LIFO", existing.format as "CSV" | "XLSX" | "PDF");
+
+      await invalidateCache(ctx.user.id, ["export.*", "dashboard.summary"]);
 
       return {
         id: newExport.id,

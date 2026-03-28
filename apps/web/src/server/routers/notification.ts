@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc";
+import { invalidateCache } from "../lib/cache";
 
 // ---------------------------------------------------------------------------
 // Schemas
@@ -74,6 +75,8 @@ export const notificationRouter = router({
           taxReminder: true,
         },
       });
+
+      await invalidateCache(ctx.user.id, ["notification.*"]);
 
       return prefs;
     }),

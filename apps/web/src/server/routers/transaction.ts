@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../trpc";
+import { router, protectedProcedure, createRateLimitedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
+import { invalidateCache } from "../lib/cache";
 
 /**
  * @spec US-002, US-003, US-005, US-008, EP-06, EP-09, EP-10 — Transaction listing, classification, dual-scenario
@@ -191,7 +192,7 @@ export const transactionRouter = router({
       return transaction;
     }),
 
-  classify: protectedProcedure
+  classify: createRateLimitedProcedure("tx.classify", 30, 60 * 1000)
     .input(classifySchema)
     .mutation(async ({ ctx, input }) => {
       const transaction = await ctx.db.transaction.findFirst({
@@ -231,6 +232,8 @@ export const transactionRouter = router({
           data: { status: "GREEN" },
         }),
       ]);
+
+      await invalidateCache(ctx.user.id, ["transaction.*", "dashboard.*"]);
 
       return classification;
     }),
@@ -279,6 +282,7 @@ export const transactionRouter = router({
             data: { status: "GREEN" },
           }),
         ]);
+        await invalidateCache(ctx.user.id, ["transaction.*", "dashboard.*"]);
         return updated[0];
       } else {
         // Create a new classification with the model choice
@@ -298,11 +302,12 @@ export const transactionRouter = router({
             data: { status: "GREEN" },
           }),
         ]);
+        await invalidateCache(ctx.user.id, ["transaction.*", "dashboard.*"]);
         return classification;
       }
     }),
 
-  bulkClassify: protectedProcedure
+  bulkClassify: createRateLimitedProcedure("tx.bulkClassify", 5, 60 * 1000)
     .input(bulkClassifySchema)
     .mutation(async ({ ctx, input }) => {
       // Verify all transactions belong to user
@@ -350,6 +355,8 @@ export const transactionRouter = router({
       ]);
 
       await ctx.db.$transaction(operations);
+
+      await invalidateCache(ctx.user.id, ["transaction.*", "dashboard.*"]);
 
       return { count: input.items.length };
     }),

@@ -21,6 +21,10 @@ export function createRedisConnection(overrideUrl?: string): Redis {
   const url = overrideUrl ?? process.env.REDIS_URL ?? DEFAULT_REDIS_URL;
   return new Redis(url, {
     maxRetriesPerRequest: null, // required by BullMQ
+    connectTimeout: 5000,
+    commandTimeout: 3000,
+    lazyConnect: true,
+    enableReadyCheck: true,
   } satisfies RedisOptions);
 }
 

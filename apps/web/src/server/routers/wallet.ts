@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../trpc";
+import { router, protectedProcedure, createRateLimitedProcedure } from "../trpc";
 import { addWalletSyncJob } from '../queue';
 import { enforceWalletLimit, enforceMonthlyTxLimit } from "../lib/plan-limits";
+import { invalidateCache } from "../lib/cache";
 
 /**
  * @spec US-001, EP-01 — Wallet management, sync triggers
@@ -85,6 +86,8 @@ export const walletRouter = router({
         },
       });
 
+      await invalidateCache(ctx.user.id, ["wallet.*", "dashboard.*"]);
+
       return wallet;
     }),
 
@@ -106,10 +109,12 @@ export const walletRouter = router({
         where: { id: input.walletId },
       });
 
+      await invalidateCache(ctx.user.id, ["wallet.*", "dashboard.*"]);
+
       return { success: true };
     }),
 
-  sync: protectedProcedure
+  sync: createRateLimitedProcedure("wallet.sync", 5, 60 * 1000)
     .input(syncWalletSchema)
     .mutation(async ({ ctx, input }) => {
       const wallet = await ctx.db.wallet.findFirst({
@@ -132,6 +137,8 @@ export const walletRouter = router({
       });
 
       await addWalletSyncJob(wallet.id, wallet.chainId, wallet.lastSyncBlock ? Number(wallet.lastSyncBlock) : undefined);
+
+      await invalidateCache(ctx.user.id, ["wallet.*", "dashboard.*"]);
 
       return {
         status: "queued" as const,

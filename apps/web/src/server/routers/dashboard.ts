@@ -1,4 +1,5 @@
-import { router, protectedProcedure } from "../trpc";
+import { router } from "../trpc";
+import { createCachedProcedure } from "../lib/cache";
 
 /**
  * @spec US-006, EP-08 — Dashboard KPIs, Freigrenze tracking, Haltefrist alerts
@@ -7,8 +8,9 @@ import { router, protectedProcedure } from "../trpc";
 export const dashboardRouter = router({
   /**
    * Summary — wallet/tx/export/sync overview counts
+   * Cache TTL: 30s (frequently refreshed overview data)
    */
-  summary: protectedProcedure.query(async ({ ctx }) => {
+  summary: createCachedProcedure(30).query(async ({ ctx }) => {
     const [walletCount, totalTxCount, classifiedTxCount, pendingExports, syncingWallets] =
       await Promise.all([
         ctx.db.wallet.count({ where: { userId: ctx.user.id } }),
@@ -40,8 +42,9 @@ export const dashboardRouter = router({
 
   /**
    * KPIs — classified %, Freigrenze usage, recent tx count
+   * Cache TTL: 60s (computed aggregates, moderate staleness OK)
    */
-  kpis: protectedProcedure.query(async ({ ctx }) => {
+  kpis: createCachedProcedure(60).query(async ({ ctx }) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const thirtyDaysAgoUnix = Math.floor(thirtyDaysAgo.getTime() / 1000);
@@ -115,8 +118,9 @@ export const dashboardRouter = router({
 
   /**
    * Ampel breakdown — GROUP BY status with counts and percentages
+   * Cache TTL: 60s (status distribution changes infrequently)
    */
-  ampelBreakdown: protectedProcedure.query(async ({ ctx }) => {
+  ampelBreakdown: createCachedProcedure(60).query(async ({ ctx }) => {
     const grouped = await ctx.db.transaction.groupBy({
       by: ["status"],
       where: { wallet: { userId: ctx.user.id } },
@@ -139,8 +143,9 @@ export const dashboardRouter = router({
 
   /**
    * Recent transactions — last 10 with classification status
+   * Cache TTL: 15s (most dynamic dashboard data)
    */
-  recentTransactions: protectedProcedure.query(async ({ ctx }) => {
+  recentTransactions: createCachedProcedure(15).query(async ({ ctx }) => {
     const transactions = await ctx.db.transaction.findMany({
       where: { wallet: { userId: ctx.user.id } },
       orderBy: { blockTimestamp: "desc" },
@@ -173,8 +178,9 @@ export const dashboardRouter = router({
   /**
    * Monthly activity — tx count per month for the last 12 months
    * Optimized: single query instead of N+1
+   * Cache TTL: 300s (historical data, rarely changes)
    */
-  monthlyActivity: protectedProcedure.query(async ({ ctx }) => {
+  monthlyActivity: createCachedProcedure(300).query(async ({ ctx }) => {
     const now = new Date();
     const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
     const startTimestamp = Math.floor(twelveMonthsAgo.getTime() / 1000);
@@ -207,8 +213,9 @@ export const dashboardRouter = router({
 
   /**
    * Portfolio summary — realized gains/losses and open positions from tax engine
+   * Cache TTL: 60s (computed financial data, moderate staleness OK)
    */
-  portfolioSummary: protectedProcedure.query(async ({ ctx }) => {
+  portfolioSummary: createCachedProcedure(60).query(async ({ ctx }) => {
     const currentYear = new Date().getFullYear();
 
     const taxEvents = await ctx.db.taxEvent.findMany({
@@ -270,8 +277,9 @@ export const dashboardRouter = router({
 
   /**
    * Classification progress — completion by protocol
+   * Cache TTL: 60s (classification changes are infrequent)
    */
-  classificationProgress: protectedProcedure.query(async ({ ctx }) => {
+  classificationProgress: createCachedProcedure(60).query(async ({ ctx }) => {
     const grouped = await ctx.db.transaction.groupBy({
       by: ["protocol", "status"],
       where: { wallet: { userId: ctx.user.id } },
@@ -298,8 +306,9 @@ export const dashboardRouter = router({
 
   /**
    * Haltefrist upcoming — tax lots approaching 365-day holding period within 30 days
+   * Cache TTL: 300s (holding period data, rarely changes within minutes)
    */
-  haltefristUpcoming: protectedProcedure.query(async ({ ctx }) => {
+  haltefristUpcoming: createCachedProcedure(300).query(async ({ ctx }) => {
     const now = new Date();
     const oneYearFromNow = new Date(now);
     oneYearFromNow.setDate(oneYearFromNow.getDate() + 365);
